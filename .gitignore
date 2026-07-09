@@ -1,0 +1,19 @@
+# VS Code
+.vscode/
+
+# Build output
+build/
+bin/
+obj/
+*.o
+*.out
+*.a
+*.so
+
+# Debugging
+*.dSYM/
+*.gdb_history
+
+# Temporary files
+*.swp
+*~
