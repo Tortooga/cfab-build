@@ -17,3 +17,6 @@ obj/
 # Temporary files
 *.swp
 *~
+
+# Project Specific Files
+cfab
