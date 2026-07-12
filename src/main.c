@@ -1,38 +1,30 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
-
 #include "status.h"
+#include "cfab_file.h"
 
-static StatusCode get_root_project_dir_path(char *buffer, size_t buffer_length);
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+
 
 int main(void)
 {
     StatusCode status;
 
-    char cwd[PATH_MAX]; 
-     
-    status = get_root_project_dir_path(cwd, PATH_MAX);
+    char *cwd_buffer;
+    size_t cwd_buffer_length;
 
-    //TODO: validate cwd
+    status = get_root_project_dir_path(&cwd_buffer, &cwd_buffer_length);
 
-    printf("%s\n", cwd);
-}
-
-//TODO: Maybe Remove this function
-/* 
-    Wraps getcwd to return appropriate StatusCode
-    path_buffer must be of length PATH_MAX at least
-*/
-static StatusCode get_root_project_dir_path(char *buffer, size_t buffer_length)
-{
-    /* getcwd already validates buffer_length is sufficient and inserts null terminator */
-    char *ret = getcwd(buffer, buffer_length);
-
-    if (!ret)
+    if (status != SUCCESS)
     {
-        return CFAB_FAILED_TO_GET_CWD;
+        printf("%d\n", status);
+        return EXIT_FAILURE;
     }
 
-    return SUCCESS;
+    printf("%s\n", cwd_buffer);
+
+    root_project_dir_path_buffer_destroy(cwd_buffer);
+
+    return EXIT_SUCCESS;
 }
+ 
