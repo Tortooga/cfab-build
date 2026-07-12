@@ -13,12 +13,15 @@ typedef enum
     /* General Status Codes */
         SUCCESS = 0,
         NULL_POINTER_PASSED = 1,
+        IMPLEMENTATION_INCOMPLETE = 2,
 
     /* Domain Specific Status Codes */
         // Cfab Process
             CFAB_FAILED_TO_GET_MAX_PATH_LENGTH = 101,
             CFAB_FAILED_TO_GET_CWD = 102, 
             CFAB_HEAP_ALLOCATION_FAILED = 103,
+            CFAB_FAILED_TO_OPEN_CFAB_FILE = 104,
+            CFAB_FILE_DOESNT_EXIST = 105,
         // Parser
 } StatusCode;
 
