@@ -29,4 +29,9 @@ void root_project_dir_path_buffer_destroy(char *buffer);
 */
 StatusCode open_cfab_file(const char *parent_dir_path, FILE **out_fd);
 
+/*
+    Closes cfab File
+*/
+StatusCode close_cfab_file(FILE *fd);
+
 #endif

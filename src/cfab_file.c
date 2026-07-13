@@ -72,6 +72,7 @@ void root_project_dir_path_buffer_destroy(char *buffer)
 /*
     parent_dir_path must be a C string. We don't take a length argument as the parent_dir_buffer is usually larger than the actual path.
     So it is more memory effecient to count the length using strlen
+    parent_dir_path must not have a trailing '/'
 */
 StatusCode open_cfab_file(const char *parent_dir_path, FILE **out_fd)
 {
@@ -118,11 +119,19 @@ static void get_cfab_file_path(const char *parent_dir_path, const size_t parent_
     out_cfab_file_path[cfab_file_path_length - 1] = '\0';
 }
 
-StatusCode close_cfab_file(FILE *fd)
+StatusCode close_cfab_file(FILE *file)
 {
-    if (!fd)
+    if (!file)
     {
         return NULL_POINTER_PASSED;
     }
-    return IMPLEMENTATION_INCOMPLETE;
+
+    int ret = fclose(file);
+
+    if (ret != 0)
+    {
+        return CFAB_FAILED_TO_CLOSE_FILE;
+    }
+    
+    return SUCCESS;
 }
