@@ -22,8 +22,11 @@ typedef enum
             CFAB_HEAP_ALLOCATION_FAILED = 103,
             CFAB_FAILED_TO_OPEN_CFAB_FILE = 104,
             CFAB_FILE_DOESNT_EXIST = 105,
-            CFAB_FAILED_TO_CLOSE_FILE,
-        // Parser
+            CFAB_FAILED_TO_CLOSE_FILE = 106,
+
+        // cfab File Processor
+            PROCESSOR_FILE_READ_ERROR = 201, 
+        
 } StatusCode;
 
 #endif

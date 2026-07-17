@@ -1,6 +1,8 @@
 #include "status.h"
 #include "cfab_file.h"
+#include <cfab_file_processor.h>
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -26,6 +28,9 @@ int main(void)
     open_cfab_file(cwd_buffer, &fd);
 
     int byte;
+
+
+    bool commend_indicator = false; 
 
     while (1)
     {
