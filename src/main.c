@@ -31,18 +31,9 @@ int main(void)
 
 
     bool commend_indicator = false; 
+    StatusCode preprocess_file(FILE *file, char **out_preprocessed_data);
 
-    while (1)
-    {
-        byte = fgetc(fd);
-
-        if (byte == EOF)
-        {
-            break;
-        }
-
-        printf("%c", byte);
-    }
+    preprocess_file(fd, NULL);
 
     printf("\n");
 
