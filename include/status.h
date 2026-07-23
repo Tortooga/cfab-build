@@ -25,7 +25,9 @@ typedef enum
             CFAB_FAILED_TO_CLOSE_FILE = 106,
 
         // cfab File Processor
-            PROCESSOR_FILE_READ_ERROR = 201, 
+            PROCESSOR_FILE_READ_ERROR = 201,
+            PROCESSOR_PREPROCESSOR_BUFFER_FULL = 202, 
+            PROCESSOR_SEEK_FAIL = 203,
         
 } StatusCode;
 
