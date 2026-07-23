@@ -1,5 +1,5 @@
-#ifndef CFAB_FILE_PROCESSOR_H
-#define CFAB_FILE_PROCESSOR_H
+#ifndef PREPROCESSOR_H
+#define PREPROCESSOR_H
 
 #include <stddef.h>
 
@@ -24,6 +24,6 @@ static const char INSIGNIFICANT_CHARS[] = {' ', '\n'};
 static const size_t INSIGNIFICANT_CHARS_COUNT = sizeof(INSIGNIFICANT_CHARS);
 
 StatusCode preprocess_file(FILE *file, char **out_preprocessed_data, size_t *out_preprocessed_data_size);
-
+void destroy_preprocessed_data(char *buffer);
 
 #endif

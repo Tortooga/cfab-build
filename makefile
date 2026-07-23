@@ -11,8 +11,8 @@ run: bin/cfab
 	@./bin/cfab
 
 # Executable Files
-bin/cfab: obj/main.o obj/cfab_file.o obj/cfab_file_processor.o
-	$(CC) obj/main.o obj/cfab_file.o -o bin/cfab obj/cfab_file_processor.o
+bin/cfab: obj/main.o obj/cfab_file.o obj/preprocessor.o
+	$(CC) obj/main.o obj/cfab_file.o -o bin/cfab obj/preprocessor.o
 
 # Pattern Rules 
 obj/%.o: src/%.c

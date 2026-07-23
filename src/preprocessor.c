@@ -4,7 +4,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include "cfab_file_processor.h"
+#include "preprocessor.h"
 #include "status.h"
 
 #define PREPROCESSOR_TEMP_BUFFER_SIZE 1024
