@@ -11,12 +11,17 @@
 #define PARSER_ERROR_BUFFER_LENGTH 256
 
 #define TARGET_NAME_TERMINATION_OPERATOR ':'
+#define DEPENDENCY_DELIMITER ','
 #define CMDS_BLOCK_START_OPERATOR '{'
 #define CMDS_BLOCK_END_OPERATOR '}'
-#define CMD_DELIMITERR ';'
+#define CMD_DELIMITER ';'
 
 
-/* all character sequences are null terminated */
+/*  
+    Rule struct where dependancies are only stored as textual names 
+    and are not linked to their corseponding nodes.
+    all character sequences are null terminated. 
+*/
 typedef struct 
 {
     char *target_name;
@@ -28,15 +33,23 @@ typedef struct
     size_t cmds_amount;
 } UnresolvedRule;
 
+
+/*
+    Types of parser errors
+*/
 typedef enum 
 {
-    UNEXPECTED_CMD_BLOCK_END_OPERATOR,
-    UNEXPECTED_CMD_DELIMITERR,
     TARGET_NAME_IS_TOO_LONG,
-    TARGET_NAME_INCOMPLETE
+    TARGET_NAME_INCOMPLETE,
+    UNEXPTECTED_DEPENDENCY_DELIMITER,
+    UNEXPECTED_CMD_DELIMITER,
+    UNEXPECTED_CMD_BLOCK_END_OPERATOR,
 } ErrorType;
 
-// Tokenises data in place
+/*  
+    cfabfile Parser. 
+    data must be mutable preproccessed cfabfile text.
+*/
 typedef struct 
 {
     // Data must be mutable, Parser tokenizes in place

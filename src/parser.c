@@ -52,12 +52,16 @@
 
                 return SUCCESS;
 
+            case DEPENDENCY_DELIMITER:
+                parser->error_type = UNEXPTECTED_DEPENDENCY_DELIMITER;
+                goto target_name_preserving_failure;
+
             case CMDS_BLOCK_END_OPERATOR:
                 parser->error_type = UNEXPECTED_CMD_BLOCK_END_OPERATOR;
                 goto target_name_preserving_failure;
             
-            case CMD_DELIMITERR:                
-                parser->error_type = UNEXPECTED_CMD_DELIMITERR;
+            case CMD_DELIMITER:                
+                parser->error_type = UNEXPECTED_CMD_DELIMITER;
                 goto target_name_preserving_failure;
 
             default:

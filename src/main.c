@@ -1,6 +1,7 @@
 #include "status.h"
 #include "cfab_file.h"
-#include <cfab_file_processor.h>
+#include "preprocessor.h"
+#include "parser.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -27,19 +28,51 @@ int main(void)
     FILE *fd;
     open_cfab_file(cwd_buffer, &fd);
 
-    int byte;
+    char *preprocessed_data;
+    size_t preprocessed_data_size;
+    
+    status = preprocess_file(fd, &preprocessed_data, &preprocessed_data_size);
 
+    printf("Preprocessor Status: %d\n", status);
 
-    bool commend_indicator = false; 
-    StatusCode preprocess_file(FILE *file, char **out_preprocessed_data);
-
-    preprocess_file(fd, NULL);
+    for (size_t i = 0; i < preprocessed_data_size; i++)
+    {
+        printf("%c", preprocessed_data[i]);
+    }
 
     printf("\n");
+    printf("\n");
 
-    status = close_cfab_file(fd);
-    root_project_dir_path_buffer_destroy(cwd_buffer);
+    Parser parser = {
+        .data = preprocessed_data,
+        .data_length = preprocessed_data_size,
+        .cursor = 0,
+    };
+
+    UnresolvedRule unresolved_rule;
+    bool no_deps_flag;
+    
+    status = parse_target_name(&parser, &unresolved_rule, &no_deps_flag);
+    
+    printf("Parse Target Name Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        printf("Parser Error Code: %d\n", parser.error_type);
+        if (parser.has_error_target)
+        {
+            printf("Parser Error Target: %s\n", parser.error_target_name);
+        }
+        goto cleanup;
+    }
+
+
+    printf("Target Name: %s\n", unresolved_rule.target_name);
+
+    cleanup:
+        destroy_preprocessed_data(preprocessed_data);
+        close_cfab_file(fd);
+        root_project_dir_path_buffer_destroy(cwd_buffer);
 
     return EXIT_SUCCESS;
 }
- 
