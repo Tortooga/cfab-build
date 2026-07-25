@@ -29,6 +29,9 @@ typedef enum
             PROCESSOR_PREPROCESSOR_BUFFER_FULL = 202, 
             PROCESSOR_SEEK_FAIL = 203,
         
+        // cfab file Parser
+            PARSER_FAILED_TO_READ_TARGET_NAME = 301,
+        
 } StatusCode;
 
 #endif
