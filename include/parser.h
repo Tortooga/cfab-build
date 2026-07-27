@@ -41,9 +41,11 @@ typedef enum
 {
     TARGET_NAME_IS_TOO_LONG,
     TARGET_NAME_INCOMPLETE,
+    UNEXPECTED_TARGET_NAME_TERMINATION_OPERATOR,
     UNEXPTECTED_DEPENDENCY_DELIMITER,
     UNEXPECTED_CMD_DELIMITER,
     UNEXPECTED_CMD_BLOCK_END_OPERATOR,
+    RULE_MISSING_CMD_BLOCK,
 } ErrorType;
 
 /*  
@@ -65,6 +67,6 @@ typedef struct
     bool has_error_target;
 } Parser;
 
-
-/*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *out_unresolved_rule, bool *out_no_deps_flag);
+/*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag);
+/*static*/ StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
 #endif

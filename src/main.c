@@ -66,9 +66,36 @@ int main(void)
         goto cleanup;
     }
 
+    printf("Target Name: %s\n\n", unresolved_rule.target_name);
 
-    printf("Target Name: %s\n", unresolved_rule.target_name);
+    size_t deps_amount;
 
+    status = count_tokenise_deps(&parser, &deps_amount, &unresolved_rule);
+
+    printf("Count Deps Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        printf("Parser Error Code %d\n", parser.error_type);
+        printf("Error Target: %s\n", parser.error_target_name);  
+        goto cleanup;
+    }
+
+    printf("Deps Amount: %zu\n", deps_amount);
+
+    printf("\n");
+
+    for (size_t i = 0; i < parser.data_length; i++)
+    {
+        if (parser.data[i] == '\0')
+        {
+            printf("-");
+        }
+
+        printf("%c", parser.data[i]);
+    }
+
+    printf("\n");
     cleanup:
         destroy_preprocessed_data(preprocessed_data);
         close_cfab_file(fd);
