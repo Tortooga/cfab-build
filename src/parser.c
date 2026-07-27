@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "parser.h"
 #include "status.h"
@@ -15,10 +16,69 @@
     Call after parse_target_name. This guarantees target_unresolved_rule->target_name is initialised 
 */
 
-/*StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
+/*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
+    // Writes the beginning of each dependancies token onto target_unresolved_rule and updates target_unresolved_rule->deps_amount
+    
+    target_unresolved_rule->deps_amount = 0;
 
-}*/
+    size_t deps_amount;
+
+    StatusCode status = count_tokenise_deps(parser, &deps_amount, target_unresolved_rule);
+
+    if (status != SUCCESS)
+    {
+        // count_tokenise_deps wrote the parser error into the parser struct
+        return status;
+    }
+
+    if (deps_amount == 0)
+    {
+        return SUCCESS;
+    }
+
+    target_unresolved_rule->deps = malloc(sizeof(char*) * deps_amount);
+
+    if (target_unresolved_rule->deps == NULL)
+    {
+        return CFAB_HEAP_ALLOCATION_FAILED;
+    }
+
+    // dependancy tokens amount guaranteed to be >= 1
+    // cursor is pointing at first token
+    target_unresolved_rule->deps[0] = &parser->data[parser->cursor];
+    size_t cur_deps_tokens_amount = 1;
+
+    while (parser->cursor < parser->data_length)
+    {
+        if (cur_deps_tokens_amount == deps_amount)
+        {
+            target_unresolved_rule->deps_amount = deps_amount;
+            return SUCCESS;
+        }
+
+        if (parser->data[parser->cursor] == '\0')
+        {
+            // previous check guarantees there are more dependancies. This guarantees there are more tokens which means parser->cursor + 1 is appropriate
+            target_unresolved_rule->deps[cur_deps_tokens_amount] = &parser->data[parser->cursor + 1];
+            cur_deps_tokens_amount++;
+        }
+
+        parser->cursor++;
+    }
+
+    // should be impossible
+    parser->error_type = EOF_BEFORE_DEPENDANCIES_TERMINATION;
+    parser->error_target_name = target_unresolved_rule->target_name;
+    parser->has_error_target = true;
+
+    target_unresolved_rule->deps_amount = 0;
+    free(target_unresolved_rule->deps);
+    target_unresolved_rule->deps = NULL;
+    return PARSER_FAILED_TO_STORE_DEPENDANCIES_TOKENS;
+}
+
+
 
 /*
     Counts and tokenises the dependancies. Call with parser->cursor pointing at 
@@ -67,7 +127,7 @@
                 }
 
                 parser->data[counting_cursor] = '\0';
-
+ 
                 /*
                     This loop counts occurances of dependancy delimiters.
                     If there are dependancies, their amount will be equivilent to the amount of delimiters + 1

@@ -68,11 +68,7 @@ int main(void)
 
     printf("Target Name: %s\n\n", unresolved_rule.target_name);
 
-    size_t deps_amount;
-
-    status = count_tokenise_deps(&parser, &deps_amount, &unresolved_rule);
-
-    printf("Count Deps Status: %d\n", status);
+    status = parse_deps_names(&parser, &unresolved_rule);
 
     if (status != SUCCESS)
     {
@@ -81,21 +77,17 @@ int main(void)
         goto cleanup;
     }
 
-    printf("Deps Amount: %zu\n", deps_amount);
+    printf("Parse Dependancies Status: %d\n", status);
+    printf("Dependancies Amount: %zu n\n", unresolved_rule.deps_amount);
+    printf("dependancies:\n");
 
-    printf("\n");
-
-    for (size_t i = 0; i < parser.data_length; i++)
+    for (size_t i = 0; i < unresolved_rule.deps_amount; i++)
     {
-        if (parser.data[i] == '\0')
-        {
-            printf("-");
-        }
-
-        printf("%c", parser.data[i]);
+        printf("%s\n", unresolved_rule.deps[i]);
     }
 
     printf("\n");
+
     cleanup:
         destroy_preprocessed_data(preprocessed_data);
         close_cfab_file(fd);

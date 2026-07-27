@@ -32,7 +32,7 @@ typedef enum
         // cfab file Parser
             PARSER_FAILED_TO_READ_TARGET_NAME = 301,
             PARSER_FAILED_TO_COUNT_DEPENDANCIES_AMOUNT = 302,
-        
+            PARSER_FAILED_TO_STORE_DEPENDANCIES_TOKENS = 303,
 } StatusCode;
 
 #endif

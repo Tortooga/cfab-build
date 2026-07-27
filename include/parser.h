@@ -46,6 +46,7 @@ typedef enum
     UNEXPECTED_CMD_DELIMITER,
     UNEXPECTED_CMD_BLOCK_END_OPERATOR,
     RULE_MISSING_CMD_BLOCK,
+    EOF_BEFORE_DEPENDANCIES_TERMINATION,
 } ErrorType;
 
 /*  
@@ -67,6 +68,7 @@ typedef struct
     bool has_error_target;
 } Parser;
 
+/*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule);
 /*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag);
 /*static*/ StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
 #endif
