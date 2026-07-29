@@ -9,10 +9,10 @@
 
 #define PREPROCESSOR_TEMP_BUFFER_SIZE 1024
 
-static bool char_is_significant(const char target, bool *comment_mode_indicator);
-static void count_buffer_significant_chars(const char *buffer, const size_t buffer_size, size_t *out_significant_chars_count, bool *comment_mode_indicator);
+static bool char_is_significant(const char target, bool *comment_mode_indicator, bool *command_block_indicator, bool *command_line_indicator);
+static void count_buffer_significant_chars(const char *buffer, const size_t buffer_size, size_t *out_significant_chars_count, bool *comment_mode_indicator, bool *command_block_indicator, bool *command_line_indicator);
 static StatusCode count_significant_chars(FILE *file, char *buffer, const size_t buffer_size, size_t *out_significant_chars_count);
-static StatusCode copy_buffer_significant_chars(const char *buffer, const size_t buffer_size, char **destination_buffer_cursor, const char *destination_buffer_end, bool *comment_mode_indicator);
+static StatusCode copy_buffer_significant_chars(const char *buffer, const size_t buffer_size, char **destination_buffer_cursor, const char *destination_buffer_end, bool *comment_mode_indicator, bool *command_block_indicator, bool *command_line_indicator);
 StatusCode copy_significant_chars(FILE *target_file, char *destination_buffer, const size_t destination_buffer_size, char *temp_buffer, const size_t temp_buffer_size);
 
 /*static*/ StatusCode preprocess_file(FILE *file, char **out_preprocessed_data, size_t *out_preprocessed_data_size)
@@ -72,6 +72,9 @@ StatusCode copy_significant_chars(FILE *target_file, char *destination_buffer, c
 
     StatusCode status;
     bool comment_mode_indicator = false;
+    bool command_block_indicator = false;
+    bool command_line_indicator = false;
+
     size_t read_ret;
 
     const char *destination_buffer_end = destination_buffer + destination_buffer_size;
@@ -90,7 +93,9 @@ StatusCode copy_significant_chars(FILE *target_file, char *destination_buffer, c
                     read_ret,
                     &destination_buffer_cursor,
                     destination_buffer_end,
-                    &comment_mode_indicator
+                    &comment_mode_indicator,
+                    &command_block_indicator,
+                    &command_line_indicator
                 );
 
                 if (status != SUCCESS) return status;
@@ -106,7 +111,9 @@ StatusCode copy_significant_chars(FILE *target_file, char *destination_buffer, c
             read_ret,
             &destination_buffer_cursor,
             destination_buffer_end,
-            &comment_mode_indicator
+            &comment_mode_indicator,
+            &command_block_indicator,
+            &command_line_indicator
         );
 
         if (status != SUCCESS) return status;
@@ -115,11 +122,11 @@ StatusCode copy_significant_chars(FILE *target_file, char *destination_buffer, c
     return SUCCESS; 
 } 
 
-static StatusCode copy_buffer_significant_chars(const char *target_buffer, const size_t target_buffer_size, char **destination_buffer_cursor, const char *destination_buffer_end, bool *comment_mode_indicator)
+static StatusCode copy_buffer_significant_chars(const char *target_buffer, const size_t target_buffer_size, char **destination_buffer_cursor, const char *destination_buffer_end, bool *comment_mode_indicator, bool *command_block_indicator, bool *command_line_indicator)
 {
     for (size_t i = 0; i < target_buffer_size; i++)
     {
-        if (char_is_significant(target_buffer[i], comment_mode_indicator))
+        if (char_is_significant(target_buffer[i], comment_mode_indicator, command_block_indicator, command_line_indicator))
         {
             if (*destination_buffer_cursor == destination_buffer_end)
             {
@@ -150,6 +157,9 @@ static StatusCode count_significant_chars(FILE *file, char *buffer, const size_t
     *out_significant_chars_count = 0;
 
     bool comment_mode_indicator = false;
+    bool command_block_indicator = false;
+    bool command_line_indicator = false;
+
     size_t read_ret;
     
     for (;;) 
@@ -161,31 +171,31 @@ static StatusCode count_significant_chars(FILE *file, char *buffer, const size_t
         {
             if (feof(file))
             {
-                count_buffer_significant_chars(buffer, read_ret, out_significant_chars_count, &comment_mode_indicator);
+                count_buffer_significant_chars(buffer, read_ret, out_significant_chars_count, &comment_mode_indicator, &command_block_indicator, &command_line_indicator);
                 break;
             }
 
             return PROCESSOR_FILE_READ_ERROR;
         }
 
-        count_buffer_significant_chars(buffer, read_ret, out_significant_chars_count, &comment_mode_indicator);
+        count_buffer_significant_chars(buffer, read_ret, out_significant_chars_count, &comment_mode_indicator, &command_block_indicator, &command_line_indicator);
     } 
 
     return SUCCESS;
 }
 
-static void count_buffer_significant_chars(const char *buffer, const size_t buffer_size, size_t *out_significant_chars_count, bool *comment_mode_indicator)
+static void count_buffer_significant_chars(const char *buffer, const size_t buffer_size, size_t *out_significant_chars_count, bool *comment_mode_indicator, bool *command_block_indicator, bool *command_line_indicator)
 {
     for (size_t i = 0; i < buffer_size; i++)
     {
-        if (char_is_significant(buffer[i], comment_mode_indicator))
+        if (char_is_significant(buffer[i], comment_mode_indicator, command_block_indicator, command_line_indicator))
         {
             (*out_significant_chars_count)++;
         }
     }
 }
 
-static bool char_is_significant(const char target, bool *comment_mode_indicator)
+static bool char_is_significant(const char target, bool *comment_mode_indicator, bool *command_block_indicator, bool *command_line_indicator)
 {
     if (*comment_mode_indicator)
     {
@@ -197,18 +207,47 @@ static bool char_is_significant(const char target, bool *comment_mode_indicator)
         return false;
     }
 
+    if (target == CMD_LINE_END_OPERATOR)
+    {
+        *command_line_indicator = false;
+        return true;
+    }
+
+    if (target == CMDS_BLOCK_START_OPERATOR)
+    {
+        *command_block_indicator = true;
+        return true;
+    }
+
+    if (target == CMDS_BLOCK_END_OPERATOR)
+    {
+        *command_block_indicator = false;
+        return true;
+    }
+
     if (target == START_COMMENT_OPERATOR)
     {
         *comment_mode_indicator = true;
         return false;
     }
 
+    if (*command_block_indicator && *command_line_indicator)
+    {
+        return true;
+    }
+    
     for (size_t i = 0; i < INSIGNIFICANT_CHARS_COUNT; i++)
     {
         if (target == INSIGNIFICANT_CHARS[i])
         {
             return false;
         }
+    }
+
+    if (*command_block_indicator)
+    {
+        *command_line_indicator = true;
+        return true;
     }
 
     return true;
