@@ -4,6 +4,7 @@
 
 #include "parser.h"
 #include "status.h"
+#include "preprocessor.h"
 
 /* TODO: MAKE UNRESOLVEDRULE DESTRUCTION FUNCTION */
 
@@ -12,10 +13,69 @@
     
 }*/
 
+
+/*static*/ StatusCode count_tokenise_cmds(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule)
+{
+    bool no_cmds_flag = true;
+    *out_amount = 0;
+    size_t counting_cursor = parser->cursor;
+
+    while (counting_cursor < parser->data_length)
+    {
+        switch (parser->data[counting_cursor])
+        {
+        case TARGET_NAME_TERMINATION_OPERATOR:
+            parser->error_type = UNEXPECTED_TARGET_NAME_TERMINATION_OPERATOR;
+            goto failure;
+        
+        case CMDS_BLOCK_START_OPERATOR:
+            parser->error_type = UNEXPECTED_CMD_BLOCK_START_OPERATOR;
+            goto failure;
+
+        case DEPENDENCY_DELIMITER:
+            parser->error_type = UNEXPTECTED_DEPENDENCY_DELIMITER;
+            goto failure;
+        
+        case CMDS_BLOCK_END_OPERATOR:
+            
+            if (no_cmds_flag)
+            {
+                *out_amount = 0;
+                return SUCCESS;
+            }
+
+            parser->data[counting_cursor] = '\0';
+
+            return SUCCESS;
+        
+        case CMD_LINE_END_OPERATOR:
+            
+            parser->data[counting_cursor] = '\0';
+            (*out_amount)++;
+
+            counting_cursor++;
+            break;
+            
+        default:
+            no_cmds_flag = false;
+            counting_cursor++;
+            break;
+        }
+    }
+
+    parser->error_type = RULE_MISSING_CMD_BLOCK_TERMINATOR;
+
+    failure:
+        parser->has_error_target = true;
+        parser->error_target_name = target_unresolved_rule->target_name;
+
+        return PARSER_FAILED_TO_COUNT_CMDS_AMOUNT;
+}
+
+
 /*
     Call after parse_target_name. This guarantees target_unresolved_rule->target_name is initialised 
 */
-
 /*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
     // Writes the beginning of each dependancies token onto target_unresolved_rule and updates target_unresolved_rule->deps_amount
@@ -34,6 +94,12 @@
 
     if (deps_amount == 0)
     {
+        // Advancing the cursor since 
+        if (parser->data[parser->cursor] == CMDS_BLOCK_START_OPERATOR)
+        {
+            parser->cursor++;
+        }
+
         return SUCCESS;
     }
 
@@ -114,7 +180,7 @@
                 parser->error_type = UNEXPECTED_CMD_BLOCK_END_OPERATOR;
                 goto failure;   
             
-            case CMD_DELIMITER:
+            case CMD_LINE_END_OPERATOR:
                 parser->error_type = UNEXPECTED_CMD_DELIMITER;
                 goto failure;
 
@@ -123,6 +189,7 @@
                 if (no_dependancies_flag)
                 {
                     *out_amount = 0;
+
                     return SUCCESS;
                 }
 
@@ -213,7 +280,7 @@
                 parser->error_type = UNEXPECTED_CMD_BLOCK_END_OPERATOR;
                 goto target_name_preserving_failure;
             
-            case CMD_DELIMITER:                
+            case CMD_LINE_END_OPERATOR:                
                 parser->error_type = UNEXPECTED_CMD_DELIMITER;
                 goto target_name_preserving_failure;
 

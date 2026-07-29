@@ -12,9 +12,6 @@
 
 #define TARGET_NAME_TERMINATION_OPERATOR ':'
 #define DEPENDENCY_DELIMITER ','
-#define CMDS_BLOCK_START_OPERATOR '{'
-#define CMDS_BLOCK_END_OPERATOR '}'
-#define CMD_DELIMITER ';'
 
 
 /*  
@@ -45,7 +42,9 @@ typedef enum
     UNEXPTECTED_DEPENDENCY_DELIMITER,
     UNEXPECTED_CMD_DELIMITER,
     UNEXPECTED_CMD_BLOCK_END_OPERATOR,
+    UNEXPECTED_CMD_BLOCK_START_OPERATOR,
     RULE_MISSING_CMD_BLOCK,
+    RULE_MISSING_CMD_BLOCK_TERMINATOR,
     EOF_BEFORE_DEPENDANCIES_TERMINATION,
 } ErrorType;
 
@@ -71,4 +70,5 @@ typedef struct
 /*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule);
 /*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag);
 /*static*/ StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
+/*static*/ StatusCode count_tokenise_cmds(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
 #endif
