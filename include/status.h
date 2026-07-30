@@ -36,6 +36,7 @@ typedef enum
             PARSER_FAILED_TO_COUNT_CMDS_AMOUNT = 304,
             PARSER_FAILED_TO_STORE_CMDS_TOKENS = 305,
             PARSER_EOF_BEFORE_GRAMMATICAL_TERMINATION = 306,
+            PARSER_PARSE_RULE_FAILED = 307,
 } StatusCode;
 
 #endif

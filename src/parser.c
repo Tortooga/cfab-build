@@ -6,18 +6,106 @@
 #include "status.h"
 #include "preprocessor.h"
 
-/* TODO: MAKE UNRESOLVEDRULE DESTRUCTION FUNCTION */
+void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule);
 
 // Call with parser cursor pointing at the first charecter of a rule
-static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule)
+/*static*/ StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule)
 {
+    zero_initialise_unresolved_rule(out_unresolved_rule);
+    bool no_deps_flag;
+    ErrorType parser_error;
+    parser->has_error_target = false;
 
+    StatusCode status = parse_target_name(parser, out_unresolved_rule, &no_deps_flag);
+
+    if (status != SUCCESS)
+    {
+        // parser_target_name reports the error onto the parser
+        return status;
+    }
+
+    if (!no_deps_flag)
+    {
+        status = parse_deps_names(parser, out_unresolved_rule);
+
+        if (status != SUCCESS)
+        {
+            parser_error = parser->error_type;
+            goto failure;
+        }
+
+        // parse_deps_names ends at the NULL terminator of the last dep
+
+        if (parser->cursor + 1 >= parser->data_length)
+        {
+            parser_error = RULE_MISSING_CMD_BLOCK;
+            status = PARSER_PARSE_RULE_FAILED;
+            goto failure;
+        }
+
+        parser->cursor++;
+    }
+
+    status = parse_cmds(parser, out_unresolved_rule);
+
+    if (status != SUCCESS)
+    {
+        parser_error = parser->error_type;
+        goto failure;
+    }
+
+    // parse_cmds does not consume the block end operator
+
+    while (parser->data[parser->cursor] != CMDS_BLOCK_END_OPERATOR)
+    {       
+        if (parser->cursor + 1 >= parser->data_length)
+        {
+            // Impossible since the success of parse_cmds guarantees the existence of and does not consume the CMDS_BLOCK_END_OPERATOR
+            status = PARSER_PARSE_RULE_FAILED;
+            parser_error = RULE_MISSING_CMD_BLOCK_TERMINATOR;
+            goto failure;
+        }
+
+        parser->cursor++;
+    }
+
+    // Now the cursor points at the block end operator (the last token of each rule)
+    
+    return SUCCESS;
+
+    failure:
+        parser->error_type = parser_error;
+        parser->error_target_name = out_unresolved_rule->target_name;
+        parser->has_error_target = true;
+
+        free_unresolved_rule(out_unresolved_rule);
+        return status;
 } 
 
+void free_unresolved_rule(UnresolvedRule *unresolved_rule)
+{
+    free(unresolved_rule->cmds);
+    unresolved_rule->cmds = NULL;
+    unresolved_rule->cmds_amount = 0;
 
+    free(unresolved_rule->deps);
+    unresolved_rule->deps = NULL;
+    unresolved_rule->deps_amount = 0;
+}
+
+void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
+{
+    unresolved_rule->target_name = NULL;
+    unresolved_rule->cmds = NULL;
+    unresolved_rule->cmds_amount = 0;
+
+    unresolved_rule->deps = NULL;
+    unresolved_rule->deps_amount = 0;
+}
 /*
     target_unresolved_rule->target_name assumed to be initialised.
-    Ends at the NULL terminator of the last dep.
+    Ends at the NULL terminator of the last command if there are any commands.
+    Otherwise it ends at the block end operators.
 */
 /*static*/ StatusCode parse_cmds(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
@@ -42,10 +130,21 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
         {
             parser->cursor++;
         }*/
+        while (parser->cursor < parser->data_length)
+        {
+            if (parser->data[parser->cursor] == CMDS_BLOCK_END_OPERATOR)
+            {
+                return SUCCESS;
+            }
 
-        // To enforce the invariant of ending at a null terminator at the end of the cmds;
-        parser->data[parser->cursor] = '\0';
-        return SUCCESS;
+            parser->cursor++;
+        }
+
+        parser->error_target_name = target_unresolved_rule->target_name;
+        parser->has_error_target = true;
+        parser->error_type = RULE_MISSING_CMD_BLOCK_TERMINATOR;
+
+        return PARSER_EOF_BEFORE_GRAMMATICAL_TERMINATION;
     }
 
     target_unresolved_rule->cmds = malloc(sizeof(char*) * cmds_amount);
@@ -85,7 +184,7 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
         parser->cursor++;
     }
 
-    // should be impossible
+    // Impossible since the first pass of count_tokenise_cmds should provide the correct amount of commands
     parser->error_type = EOF_BEFORE_CMDS_TERMINTATION;
     parser->error_target_name = target_unresolved_rule->target_name;
     parser->has_error_target = true;
@@ -126,7 +225,7 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
                 return SUCCESS;
             }
 
-            parser->data[counting_cursor] = '\0';
+            //parser->data[counting_cursor] = '\0';
 
             return SUCCESS;
         
@@ -157,6 +256,7 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
 
 /*
     Call after parse_target_name. This guarantees target_unresolved_rule->target_name is initialised.
+    Ends at the NULL terminator of the last dep(which coresponds to the position of the command block start operator).
 */
 /*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
@@ -175,23 +275,24 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
     }
 
     /* If there are no dependancies to be tokenised then the CMDS_BLOCK_START_OPERATOR
-       would not get replaced with a NULL terminator */ 
+       would not get replaced with a NULL terminator(which is required by our invariants) */ 
     if (deps_amount == 0)
     {
-        if (parser->data[parser->cursor] == CMDS_BLOCK_START_OPERATOR)
+        while (parser->cursor < parser->data_length)
         {
-            if (parser->cursor + 1 >= parser->data_length)
+            if (parser->data[parser->cursor] == CMDS_BLOCK_START_OPERATOR)
             {
-                parser->error_target_name = target_unresolved_rule->target_name;
-                parser->has_error_target = true;
-                parser->error_type = RULE_MISSING_CMD_BLOCK_TERMINATOR;
-
-                return PARSER_EOF_BEFORE_GRAMMATICAL_TERMINATION;
+                parser->data[parser->cursor] = '\0';
+                return SUCCESS;
             }
             parser->cursor++;
         }
+        
+        parser->error_target_name = target_unresolved_rule->target_name;
+        parser->has_error_target = true;
+        parser->error_type = RULE_MISSING_CMD_BLOCK;
 
-        return SUCCESS;
+        return PARSER_EOF_BEFORE_GRAMMATICAL_TERMINATION;
     }
 
     target_unresolved_rule->deps = malloc(sizeof(char*) * deps_amount);
@@ -231,7 +332,7 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
         parser->cursor++;
     }
 
-    // should be impossible
+    // Impossible since the first pass of count_tokenise_deps should give the correct amount of deps
     parser->error_type = EOF_BEFORE_DEPENDANCIES_TERMINATION;
     parser->error_target_name = target_unresolved_rule->target_name;
     parser->has_error_target = true;
@@ -346,7 +447,6 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
         {
             parser->error_type = TARGET_NAME_IS_TOO_LONG;
 
-            // TODO Add the first part to parser->error_target_name
             return PARSER_FAILED_TO_READ_TARGET_NAME;
         }
 
@@ -389,7 +489,6 @@ static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule
     }
 
     // End of buffer was encountered before target name terminated
-    // TODO: try to preserve target name
     parser->error_type = TARGET_NAME_INCOMPLETE;
 
     return PARSER_FAILED_TO_READ_TARGET_NAME;

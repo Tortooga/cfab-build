@@ -68,6 +68,10 @@ typedef struct
     bool has_error_target;
 } Parser;
 
+// Frees all heap based memory taken up by unresolved_rule
+void free_unresolved_rule(UnresolvedRule *unresolved_rule);
+
+/*static*/ StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule);
 /*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule);
 /*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag);
 /*static*/ StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
