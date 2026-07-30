@@ -8,11 +8,93 @@
 
 /* TODO: MAKE UNRESOLVEDRULE DESTRUCTION FUNCTION */
 
-/*static void parse_rule(char *preproccessed_data, size_t preproccessed_data_length, size_t cursor, UnresolvedRule *out_unresolved_rule, char *error_buffer, size_t error_buffer_length)
+// Call with parser cursor pointing at the first charecter of a rule
+static StatusCode parse_rule(Parser *parser, UnresolvedRule *out_unresolved_rule)
 {
-    
-}*/
 
+} 
+
+
+/*
+    target_unresolved_rule->target_name assumed to be initialised.
+    Ends at the NULL terminator of the last dep.
+*/
+/*static*/ StatusCode parse_cmds(Parser *parser, UnresolvedRule *target_unresolved_rule)
+{
+    target_unresolved_rule->cmds_amount = 0;
+
+    size_t cmds_amount;
+
+    StatusCode status = count_tokenise_cmds(parser, &cmds_amount, target_unresolved_rule);
+
+    if (status != SUCCESS)
+    {
+        // count_tokenise_cmds wrote the parser error into the parser struct
+        return status;
+    }
+
+    /* If there are no cmds to be tokenised then the CMDS_BLOCK_START_OPERATOR
+       would not get replaced with a NULL terminator*/
+    if (cmds_amount == 0)
+    {
+        /*// advancing the cursor 
+        if (parser->data[parser->cursor] == CMDS_BLOCK_END_OPERATOR)
+        {
+            parser->cursor++;
+        }*/
+
+        // To enforce the invariant of ending at a null terminator at the end of the cmds;
+        parser->data[parser->cursor] = '\0';
+        return SUCCESS;
+    }
+
+    target_unresolved_rule->cmds = malloc(sizeof(char*) * cmds_amount);
+
+    if (target_unresolved_rule->cmds == NULL)
+    {
+        return CFAB_HEAP_ALLOCATION_FAILED;
+    }
+
+    // cmds tokens amount guaranteed to be >= 1
+    // cursor is pointing at the first token
+    target_unresolved_rule->cmds[0] = &parser->data[parser->cursor];
+    size_t cur_cmd_tokens_amount = 1;
+
+    while (parser->cursor < parser->data_length)
+    {
+        if (cur_cmd_tokens_amount == cmds_amount)
+        {
+            target_unresolved_rule->cmds_amount = cmds_amount;
+
+            /* Consuming the rest of the last cmd so that after this function exits the
+               cursor is pointing at the end of all the cmds */
+
+            if (parser->data[parser->cursor] == '\0')
+            {
+                return SUCCESS;
+            }
+        }
+
+        if (parser->data[parser->cursor] == '\0')
+        {
+            // previous check guarantees there are more cmds. This guarantees there are more tokens which means parser->cursor + 1 is appropriate
+            target_unresolved_rule->cmds[cur_cmd_tokens_amount] = &parser->data[parser->cursor + 1];
+            cur_cmd_tokens_amount++;
+        }
+
+        parser->cursor++;
+    }
+
+    // should be impossible
+    parser->error_type = EOF_BEFORE_CMDS_TERMINTATION;
+    parser->error_target_name = target_unresolved_rule->target_name;
+    parser->has_error_target = true;
+
+    target_unresolved_rule->cmds_amount = 0;
+    free(target_unresolved_rule->cmds);
+    target_unresolved_rule->cmds = NULL;
+    return PARSER_FAILED_TO_STORE_CMDS_TOKENS;
+}
 
 /*static*/ StatusCode count_tokenise_cmds(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule)
 {
@@ -74,7 +156,7 @@
 
 
 /*
-    Call after parse_target_name. This guarantees target_unresolved_rule->target_name is initialised 
+    Call after parse_target_name. This guarantees target_unresolved_rule->target_name is initialised.
 */
 /*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
@@ -92,11 +174,20 @@
         return status;
     }
 
+    /* If there are no dependancies to be tokenised then the CMDS_BLOCK_START_OPERATOR
+       would not get replaced with a NULL terminator */ 
     if (deps_amount == 0)
     {
-        // Advancing the cursor since 
         if (parser->data[parser->cursor] == CMDS_BLOCK_START_OPERATOR)
         {
+            if (parser->cursor + 1 >= parser->data_length)
+            {
+                parser->error_target_name = target_unresolved_rule->target_name;
+                parser->has_error_target = true;
+                parser->error_type = RULE_MISSING_CMD_BLOCK_TERMINATOR;
+
+                return PARSER_EOF_BEFORE_GRAMMATICAL_TERMINATION;
+            }
             parser->cursor++;
         }
 
@@ -120,7 +211,14 @@
         if (cur_deps_tokens_amount == deps_amount)
         {
             target_unresolved_rule->deps_amount = deps_amount;
-            return SUCCESS;
+
+            /* Consuming the rest of the last dep so that after this function exits the
+               cursor is pointing at the end of all the deps */
+
+            if (parser->data[parser->cursor] == '\0')
+            {
+                return SUCCESS;
+            }
         }
 
         if (parser->data[parser->cursor] == '\0')
@@ -189,7 +287,6 @@
                 if (no_dependancies_flag)
                 {
                     *out_amount = 0;
-
                     return SUCCESS;
                 }
 
