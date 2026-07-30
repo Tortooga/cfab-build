@@ -96,7 +96,6 @@ StatusCode open_cfab_file(const char *parent_dir_path, FILE **out_fd)
     {
         if (errno == ENOENT)
         {
-            printf("hello\n");
             return CFAB_FILE_DOESNT_EXIST;
         }
 
