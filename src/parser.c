@@ -6,9 +6,91 @@
 #include "status.h"
 #include "preprocessor.h"
 
-void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule);
+#define FIRST_UNRESOLVED_RULE_MEMORY_ALLOCATION_EXPONENT 2
 
-// Call with parser cursor pointing at the first charecter of a rule
+void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule);
+/*
+    Parses the rules in parser.data starting at parser.cursor and ending at parser.
+    Parser errors reported in the parser
+    parser.cursor must be set to the position where you wish to start, and parser.data_length must be set to the position where you wish to end
+*/
+StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolved_rules, size_t *out_unresolved_rules_amount)
+{
+    if (!parser || !out_unresolved_rules || !out_unresolved_rules_amount)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    size_t allocation_amount = (size_t)1 << FIRST_UNRESOLVED_RULE_MEMORY_ALLOCATION_EXPONENT;
+    size_t cur_unresolved_rules_amount = 0;
+
+    *out_unresolved_rules = malloc((allocation_amount) * sizeof(UnresolvedRule));
+
+    if (*out_unresolved_rules == NULL)
+    {
+        return CFAB_HEAP_ALLOCATION_FAILED;
+    }
+
+    StatusCode status;
+    void *realloc_ret;
+    while (parser->cursor < parser->data_length)
+    {
+        if (cur_unresolved_rules_amount >= allocation_amount)
+        {
+            allocation_amount <<= 1;
+            realloc_ret = realloc(*out_unresolved_rules, allocation_amount * sizeof(UnresolvedRule*));
+
+            if (realloc_ret == NULL)
+            {
+                status = CFAB_HEAP_ALLOCATION_FAILED;
+                goto failure;
+            }
+
+            *out_unresolved_rules = realloc_ret;
+        }
+        /*  Guaranteed to move cursor on success path.
+            Reports parser errors in the parser struct.  
+            Is Responsible for freeing all the memory it allocates upon failure.  */
+        status = parse_unresolved_rule(parser, &(*out_unresolved_rules)[cur_unresolved_rules_amount]);
+
+        if (status != SUCCESS)
+        {
+            goto failure; 
+        }
+
+        cur_unresolved_rules_amount++;
+
+        if (parser->cursor + 1 >= parser->data_length)
+        {
+            break;
+        }
+
+        // We advance the cursor since it stops at the command block terminator of the previous rule
+        parser->cursor++;
+    }
+
+    *out_unresolved_rules_amount = cur_unresolved_rules_amount;
+
+    return IMPLEMENTATION_INCOMPLETE;
+    failure:
+        free_unresolved_rules(out_unresolved_rules, cur_unresolved_rules_amount);
+        free(*out_unresolved_rules);
+        return status;
+
+}
+
+void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount)
+{
+    for (size_t i = 0; i < amount; i++)
+    {
+        free_unresolved_rule(unresolved_rules[i]);
+    }
+}
+
+/* 
+    Call with parser cursor pointing at the first charecter of a rule
+    Cursor will end at the command block terminator
+*/
 /*static*/ StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule)
 {
     zero_initialise_unresolved_rule(out_unresolved_rule);
@@ -500,4 +582,32 @@ void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
         parser->has_error_target = true;
                 
         return PARSER_FAILED_TO_READ_TARGET_NAME;
+}
+
+/*  Debug  */
+
+StatusCode print_unresolved_rule(UnresolvedRule *unresolved_rule)
+{
+    if (!unresolved_rule)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    printf("Target: %s\n", unresolved_rule->target_name);
+
+    printf("Dependancies:\n");
+
+    for (size_t i = 0; i < unresolved_rule->deps_amount; i++)
+    {
+        printf("    %s\n", unresolved_rule->deps[i]);
+    }
+
+    printf("Commands:\n");
+
+    for (size_t i = 0; i < unresolved_rule->cmds_amount; i++)
+    {
+        printf("    %s\n", unresolved_rule->cmds[i]);
+    }
+    
+    return SUCCESS;
 }
