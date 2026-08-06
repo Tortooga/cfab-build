@@ -8,7 +8,14 @@
 
 #define FIRST_UNRESOLVED_RULE_MEMORY_ALLOCATION_EXPONENT 2
  
+static StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule);
+static StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule);
+static StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag);
+static StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
+static StatusCode count_tokenise_cmds(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
+static StatusCode parse_cmds(Parser *parser, UnresolvedRule *target_unresolved_rule);
 void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule);
+
 /*
     Parses the rules in parser.data starting at parser.cursor and ending at parser.
     Parser errors reported in the parser
@@ -80,6 +87,11 @@ StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolve
 
 void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount)
 {
+    if (!unresolved_rules)
+    {
+        return;
+    }
+    
     // Internal Allocations
     for (size_t i = 0; i < amount; i++)
     {
@@ -97,7 +109,7 @@ void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount)
     Call with parser cursor pointing at the first charecter of a rule
     Cursor will end at the command block terminator
 */
-/*static*/ StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule)
+static StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule)
 {
     zero_initialise_unresolved_rule(out_unresolved_rule);
     bool no_deps_flag;
@@ -206,7 +218,7 @@ void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
     Ends at the NULL terminator of the last command if there are any commands.
     Otherwise it ends at the block end operators.
 */
-/*static*/ StatusCode parse_cmds(Parser *parser, UnresolvedRule *target_unresolved_rule)
+static StatusCode parse_cmds(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
     target_unresolved_rule->cmds_amount = 0;
 
@@ -294,7 +306,7 @@ void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
     return PARSER_FAILED_TO_STORE_CMDS_TOKENS;
 }
 
-/*static*/ StatusCode count_tokenise_cmds(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule)
+static StatusCode count_tokenise_cmds(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule)
 {
     bool no_cmds_flag = true;
     *out_amount = 0;
@@ -357,7 +369,7 @@ void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
     Call after parse_target_name. This guarantees target_unresolved_rule->target_name is initialised.
     Ends at the NULL terminator of the last dep(which coresponds to the position of the command block start operator).
 */
-/*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
+static StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
     // Writes the beginning of each dependancies token onto target_unresolved_rule and updates target_unresolved_rule->deps_amount
 
@@ -456,7 +468,7 @@ void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
 
     Although this introduces coupling, it is more effiecient.
 */
-/*static*/ StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule)
+static StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule)
 {   
     bool no_dependancies_flag = true;
     *out_amount = 0;
@@ -532,7 +544,7 @@ void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
     We output the no dependencies flag to determine whether the next punctuation
     was the start of the commands block
 */    
-/*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag)
+static StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag)
 {
     *out_no_deps_flag = false;
     parser->has_error_target = false;

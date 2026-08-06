@@ -73,6 +73,7 @@ void free_unresolved_rule(UnresolvedRule *unresolved_rule);
 
 // Frees all heap based memory taken up by all the unresolved_rules
 void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount);
+
 /*
     Parses the rules in parser.data starting at parser.cursor and ending at parser.
     Parser errors reported in the parser
@@ -80,12 +81,9 @@ void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount);
 */
 StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolved_rules, size_t *out_unresolved_rules_amount);
 
+/*
+    Prints the unresolved rules attributes.
+*/
 StatusCode print_unresolved_rule(UnresolvedRule *unresolved_rule);
 
-/*static*/ StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule);
-/*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule);
-/*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag);
-/*static*/ StatusCode count_tokenise_deps(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
-/*static*/ StatusCode count_tokenise_cmds(Parser *parser, size_t *out_amount, const UnresolvedRule *target_unresolved_rule);
-/*static*/ StatusCode parse_cmds(Parser *parser, UnresolvedRule *target_unresolved_rule);
 #endif
