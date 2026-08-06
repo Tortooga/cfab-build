@@ -7,7 +7,7 @@
 #include "preprocessor.h"
 
 #define FIRST_UNRESOLVED_RULE_MEMORY_ALLOCATION_EXPONENT 2
-
+ 
 void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule);
 /*
     Parses the rules in parser.data starting at parser.cursor and ending at parser.
@@ -21,7 +21,7 @@ StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolve
         return NULL_POINTER_PASSED;
     }
 
-    size_t allocation_amount = (size_t)1 << FIRST_UNRESOLVED_RULE_MEMORY_ALLOCATION_EXPONENT;
+    size_t allocation_amount = 1UL << FIRST_UNRESOLVED_RULE_MEMORY_ALLOCATION_EXPONENT;
     size_t cur_unresolved_rules_amount = 0;
 
     *out_unresolved_rules = malloc((allocation_amount) * sizeof(UnresolvedRule));
@@ -38,7 +38,7 @@ StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolve
         if (cur_unresolved_rules_amount >= allocation_amount)
         {
             allocation_amount <<= 1;
-            realloc_ret = realloc(*out_unresolved_rules, allocation_amount * sizeof(UnresolvedRule*));
+            realloc_ret = realloc(*out_unresolved_rules, allocation_amount * sizeof(UnresolvedRule));
 
             if (realloc_ret == NULL)
             {
@@ -51,8 +51,8 @@ StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolve
         /*  Guaranteed to move cursor on success path.
             Reports parser errors in the parser struct.  
             Is Responsible for freeing all the memory it allocates upon failure.  */
-        status = parse_unresolved_rule(parser, &(*out_unresolved_rules)[cur_unresolved_rules_amount]);
-
+        status = parse_unresolved_rule(parser, *out_unresolved_rules + cur_unresolved_rules_amount);
+        
         if (status != SUCCESS)
         {
             goto failure; 
@@ -71,20 +71,26 @@ StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolve
 
     *out_unresolved_rules_amount = cur_unresolved_rules_amount;
 
-    return IMPLEMENTATION_INCOMPLETE;
+    return SUCCESS;
     failure:
         free_unresolved_rules(out_unresolved_rules, cur_unresolved_rules_amount);
-        free(*out_unresolved_rules);
         return status;
 
 }
 
 void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount)
 {
+    // Internal Allocations
     for (size_t i = 0; i < amount; i++)
     {
-        free_unresolved_rule(unresolved_rules[i]);
+        free_unresolved_rule(*unresolved_rules + i);
+
+        // No need to NULL the rule as the entire will be NULLed.
     }
+
+    // External Allocation
+    free(*unresolved_rules);
+    *unresolved_rules = NULL;
 }
 
 /* 
@@ -166,13 +172,24 @@ void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount)
 
 void free_unresolved_rule(UnresolvedRule *unresolved_rule)
 {
-    free(unresolved_rule->cmds);
-    unresolved_rule->cmds = NULL;
-    unresolved_rule->cmds_amount = 0;
-
-    free(unresolved_rule->deps);
-    unresolved_rule->deps = NULL;
-    unresolved_rule->deps_amount = 0;
+    if (unresolved_rule == NULL)
+    {
+        return;
+    }
+    
+    if (unresolved_rule->cmds_amount > 0)
+    {
+        free(unresolved_rule->cmds);
+        unresolved_rule->cmds = NULL;
+        unresolved_rule->cmds_amount = 0;
+    }
+    
+    if (unresolved_rule->deps_amount > 0)
+    {
+        free(unresolved_rule->deps);
+        unresolved_rule->deps = NULL;
+        unresolved_rule->deps_amount = 0;
+    }  
 }
 
 void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
@@ -343,7 +360,7 @@ void zero_initialise_unresolved_rule(UnresolvedRule *unresolved_rule)
 /*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule)
 {
     // Writes the beginning of each dependancies token onto target_unresolved_rule and updates target_unresolved_rule->deps_amount
-    
+
     target_unresolved_rule->deps_amount = 0;
 
     size_t deps_amount;
@@ -608,6 +625,6 @@ StatusCode print_unresolved_rule(UnresolvedRule *unresolved_rule)
     {
         printf("    %s\n", unresolved_rule->cmds[i]);
     }
-    
+
     return SUCCESS;
 }

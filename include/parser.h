@@ -71,6 +71,17 @@ typedef struct
 // Frees all heap based memory taken up by unresolved_rule
 void free_unresolved_rule(UnresolvedRule *unresolved_rule);
 
+// Frees all heap based memory taken up by all the unresolved_rules
+void free_unresolved_rules(UnresolvedRule **unresolved_rules, size_t amount);
+/*
+    Parses the rules in parser.data starting at parser.cursor and ending at parser.
+    Parser errors reported in the parser
+    parser.cursor must be set to the position where you wish to start, and parser.data_length must be set to the position where you wish to end
+*/
+StatusCode parse_unresolved_rules(Parser *parser, UnresolvedRule **out_unresolved_rules, size_t *out_unresolved_rules_amount);
+
+StatusCode print_unresolved_rule(UnresolvedRule *unresolved_rule);
+
 /*static*/ StatusCode parse_unresolved_rule(Parser *parser, UnresolvedRule *out_unresolved_rule);
 /*static*/ StatusCode parse_deps_names(Parser *parser, UnresolvedRule *target_unresolved_rule);
 /*static*/ StatusCode parse_target_name(Parser *parser, UnresolvedRule *target_unresolved_rule, bool *out_no_deps_flag);

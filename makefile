@@ -1,7 +1,8 @@
 CC = gcc
 WFLAGS = -Wall -Wextra
 IFLAGS = -I include
-
+DFLAGS = -g 
+OFLAGS = -O0
 .PHONY = run 
 
 # Quick Run

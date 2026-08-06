@@ -26,7 +26,14 @@ int main(void)
     }
 
     FILE *fd;
-    open_cfab_file(cwd_buffer, &fd);
+    status = open_cfab_file(cwd_buffer, &fd);
+
+    printf("Open cfab File Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        return EXIT_FAILURE;
+    }
 
     char *preprocessed_data;
     size_t preprocessed_data_size;
@@ -49,8 +56,50 @@ int main(void)
         .cursor = 0,
     };
 
-    UnresolvedRule unresolved_rule;
-    bool no_deps_flag;
+    UnresolvedRule *unresolved_rules;
+    size_t amount;
+
+    status = parse_unresolved_rules(&parser, &unresolved_rules, &amount);
+
+    printf("Parser Rules Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        goto cleanup;
+    }
+    for (size_t i = 0; i < amount; i++)
+    {
+        print_unresolved_rule(&unresolved_rules[i]);
+        printf("\n");
+    }
+
+    /* UnresolvedRule unresolved_rule;
+
+    status = parse_unresolved_rule(&parser, &unresolved_rule);
+
+    printf("Parse Rule Status: %d\n", status);
+    if (status != SUCCESS)
+    {
+        printf("%d\n", parser.error_type);
+        goto cleanup;
+    }
+
+    printf("Target Name: %s\n", unresolved_rule.target_name);
+    
+    printf("Dependancies[%zu]:\n", unresolved_rule.deps_amount);
+
+    for (size_t i = 0; i < unresolved_rule.deps_amount; i++)
+    {
+        printf("    %s\n", unresolved_rule.deps[i]);
+    }
+
+    printf("Commands[%zu]:\n", unresolved_rule.cmds_amount);
+
+    for (size_t i = 0; i < unresolved_rule.cmds_amount; i++)
+    {
+        printf("    %s\n", unresolved_rule.cmds[i]);
+    }
+    /*bool no_deps_flag;
     
     status = parse_target_name(&parser, &unresolved_rule, &no_deps_flag);
     
@@ -78,7 +127,7 @@ int main(void)
     }
 
     printf("Parse Dependancies Status: %d\n", status);
-    printf("Dependancies Amount: %zu n\n", unresolved_rule.deps_amount);
+    printf("Dependancies Amount: %zu\n", unresolved_rule.deps_amount);
     printf("dependancies:\n");
 
     for (size_t i = 0; i < unresolved_rule.deps_amount; i++)
@@ -88,6 +137,28 @@ int main(void)
 
     printf("\n");
 
+    parser.cursor++;
+    status = parse_cmds(&parser, &unresolved_rule);
+
+    printf("Parse Commands Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        printf("CMD Parser Error: %d\n", parser.error_type);
+        goto cleanup;
+    }
+
+    printf("Commands:\n");
+
+    for (size_t i = 0; i < unresolved_rule.cmds_amount; i++)
+    {
+        printf("%s\n", unresolved_rule.cmds[i]);
+    }
+
+    for (; parser.cursor < parser.data_length; parser.cursor++)
+    {
+        printf("1%c", parser.data[parser.cursor]);
+    }*/
     cleanup:
         destroy_preprocessed_data(preprocessed_data);
         close_cfab_file(fd);
