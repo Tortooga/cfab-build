@@ -23,6 +23,8 @@ typedef enum
             CFAB_FAILED_TO_OPEN_CFAB_FILE = 104,
             CFAB_FILE_DOESNT_EXIST = 105,
             CFAB_FAILED_TO_CLOSE_FILE = 106,
+            CFAB_ATTEMPTED_TO_ACCESS_NON_EXISTENT_PATH = 107,
+            CFAB_PATH_RESOLUTION_ERROR = 108,
 
         // cfab File Processor
             PROCESSOR_FILE_READ_ERROR = 201,
