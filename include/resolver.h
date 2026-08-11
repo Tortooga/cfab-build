@@ -11,8 +11,8 @@
 
 typedef enum 
 {
-    PATH,
-    RULE
+    PATH_DEP,
+    RULE_DEP
 } DepType;
 
 typedef struct ResolvedRule ResolvedRule;
@@ -31,12 +31,12 @@ typedef struct
 
 typedef struct ResolvedRule
 {
-    char *target_name;
+    const char *target_name;
 
-        ResolvedDep *deps;
+    ResolvedDep *deps;
     size_t deps_amount;
 
-    char **cmds;
+    const char **cmds;
     size_t cmds_amount;
 } ResolvedRule;
 

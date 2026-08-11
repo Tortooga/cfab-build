@@ -12,9 +12,16 @@ run: bin/cfab
 	@./bin/cfab
 
 # Executable Files
-bin/cfab: obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o
+bin/cfab: bin obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o
 	$(CC) obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o -o bin/cfab 
 
 # Pattern Rules 
-obj/%.o: src/%.c
+obj/%.o: src/%.c obj
 	$(CC) -c $(WFLAGS) $(IFLAGS) $< -o $@
+
+# Required Dirs
+obj:
+	mkdir -p obj 
+
+bin:
+	mkdir -p bin 
