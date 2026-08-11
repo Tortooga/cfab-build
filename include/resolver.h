@@ -2,6 +2,7 @@
 #define RESOLVER_H
 
 #include "status.h" 
+#include "parser.h"
 
 #include <stddef.h>
 
@@ -36,9 +37,12 @@ typedef struct ResolvedRule
     ResolvedDep *deps;
     size_t deps_amount;
 
-    const char **cmds;
+    char **cmds;
     size_t cmds_amount;
+
+    UnresolvedRule *unresolved_rule;
 } ResolvedRule;
+
 
 /*static*/ StatusCode verify_path(const char *path);
 #endif

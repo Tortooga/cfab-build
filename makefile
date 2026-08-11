@@ -16,7 +16,7 @@ bin/cfab: bin obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/res
 	$(CC) obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o -o bin/cfab 
 
 # Pattern Rules 
-obj/%.o: src/%.c obj
+obj/%.o: src/%.c | obj 
 	$(CC) -c $(WFLAGS) $(IFLAGS) $< -o $@
 
 # Required Dirs
