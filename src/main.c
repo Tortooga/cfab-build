@@ -74,13 +74,33 @@ int main(void)
     }
     */
 
-    status = verify_path("../virtual-file-system-c");
-    printf("Path Resolution Status %d\n", status);
+    ResolvedRule *resolved_rules;
+    status = resolved_rules_init(unresolved_rules, amount, &resolved_rules);
+
+    printf("Resolved Rules Init Status: %d\n", status);
 
     if (status != SUCCESS)
     {
-        perror("stat");
         goto cleanup;
+    }
+
+    ResolvedDep dep;
+    status = resolve_dep("one", &dep, resolved_rules, amount);
+
+    printf("Resolve Dependancy Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        goto cleanup;
+    }
+
+    if (dep.type == PATH_DEP)
+    {
+        printf("Path Dependancy: %s\n", dep.dep.path);
+    }
+    else 
+    {
+        printf("Rule Dependancy: %s\n", dep.dep.resolved_rule->target_name);
     }
 
     cleanup:

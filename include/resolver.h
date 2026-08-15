@@ -24,7 +24,7 @@ typedef struct
     union 
     {
         ResolvedRule *resolved_rule;
-        char *path;
+        const char *path;
     } dep;
 
     DepType type;
@@ -45,4 +45,6 @@ typedef struct ResolvedRule
 
 
 /*static*/ StatusCode verify_path(const char *path);
+/*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount);
+/*static*/ StatusCode resolved_rules_init(UnresolvedRule *unresolved_rules, size_t unresolved_rules_amount, ResolvedRule **out_resolved_rules);
 #endif

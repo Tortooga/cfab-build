@@ -16,7 +16,14 @@
     Success does not imply the validity of the rule graph.
 */
 
- 
+StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount);
+StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
+
+/*
+    Heap allocates and initialises resolved rules.
+    If the function succeeds the amount of resolved rules initialised is equal to the amount of unresolved rules.
+    If it fails the function does not guarantee any initialisation. 
+*/
 /*static*/ StatusCode resolved_rules_init(UnresolvedRule *unresolved_rules, size_t unresolved_rules_amount, ResolvedRule **out_resolved_rules)
 {
      if (unresolved_rules_amount == 0)
@@ -74,13 +81,69 @@
     return CFAB_PATH_RESOLUTION_ERROR;
 }
 
-// dep has to be a C-string indicating the target name of the dependacny rule.
-// a dependancy rule will successfully be returned if dep is a string equivilent to its target name.
-/*static*/ StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, const UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount)
+/*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
 {
-    (void)dep;
-    (void)out_resolved_dep;
-    (void)unresolved_rules;
-    (void)unresolved_rules_amount;
-    return IMPLEMENTATION_INCOMPLETE;
+    StatusCode status = resolve_dep_as_rule(dep, out_resolved_dep, resolved_rules, resolved_rules_amount);
+
+    if (status == SUCCESS)
+    {
+        return SUCCESS;
+    }
+
+    if (status != RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_RULE)
+    {
+        return status;
+    }
+
+    status = resolve_dep_as_path(dep, out_resolved_dep);
+
+    if (status == RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_PATH)
+    {
+        return RESOLVER_DEP_COULD_NOT_BE_RESOLVED;
+    }
+
+    return status;
+}
+
+/*
+    dep must be a valid C-String.
+    Sets out_resolved_rule with the path in the dep if successful.
+    Upon failure nothing is initialised.
+*/
+StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep)
+{
+    StatusCode status = verify_path(dep);
+
+    if (status != SUCCESS)
+    {
+        return RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_PATH;
+    }
+
+    out_resolved_dep->type = PATH_DEP;
+    out_resolved_dep->dep.path = dep;
+
+    return SUCCESS;
+}
+
+/*
+    dep has to be a C-string indicating the target name of the dependacny rule.
+    a dependancy rule will successfully be returned if dep is a string equivilent to its target name.
+*/
+StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
+{
+    for (size_t i = 0; i < resolved_rules_amount; i++)
+    {
+        // resolved_rules[i]unresolved_rules->target_name guaranteed by parser to be NULL terminated.
+        if (strcmp(dep, resolved_rules[i].unresolved_rule->target_name) != 0)
+        {
+            continue;
+        }
+
+        out_resolved_dep->type = RULE_DEP;
+        out_resolved_dep->dep.resolved_rule =&resolved_rules[i];
+        
+        return SUCCESS;
+    }
+
+    return RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_RULE;
 }

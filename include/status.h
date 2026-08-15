@@ -31,7 +31,7 @@ typedef enum
             PROCESSOR_PREPROCESSOR_BUFFER_FULL = 202, 
             PROCESSOR_SEEK_FAIL = 203,
         
-        // cfab file Parser
+        // Parser
             PARSER_FAILED_TO_READ_TARGET_NAME = 301,
             PARSER_FAILED_TO_COUNT_DEPENDANCIES_AMOUNT = 302,
             PARSER_FAILED_TO_STORE_DEPENDANCIES_TOKENS = 303,
@@ -39,6 +39,11 @@ typedef enum
             PARSER_FAILED_TO_STORE_CMDS_TOKENS = 305,
             PARSER_EOF_BEFORE_GRAMMATICAL_TERMINATION = 306,
             PARSER_PARSE_RULE_FAILED = 307,
+
+        // Resolver
+            RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_RULE = 401,
+            RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_PATH = 402,
+            RESOLVER_DEP_COULD_NOT_BE_RESOLVED = 403,
 } StatusCode;
 
 #endif
