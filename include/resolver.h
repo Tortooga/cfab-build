@@ -43,6 +43,14 @@ typedef struct ResolvedRule
     UnresolvedRule *unresolved_rule;
 } ResolvedRule;
 
+typedef struct 
+{
+    bool has_error_rule;
+    UnresolvedRule *error_rule;
+
+    bool has_error_dep;
+    size_t error_dep_index
+} ErrorObjectsReporter;
 
 /*static*/ StatusCode verify_path(const char *path);
 /*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount);

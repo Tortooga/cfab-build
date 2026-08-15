@@ -86,10 +86,10 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
 /*
     Calls resolved rules initialiser.
     Resolves dependancies.
-    Upon failure resolved rules will be deallocated.
-    Upon success caller is responsible for deallocation
+    Upon failure resolved rules will be deallocated. And if out_failed_rule is not NULL that means it is set to the unresolved_rule that caused the resolver to fail.
+    Upon success caller is responsible for deallocation.
 */
-StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount)
+StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount, UnresolvedRule **out_failed_rule)
 {
     if (!out_resolved_rules)
     {
@@ -102,6 +102,8 @@ StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_res
     {
         return NULL_POINTER_PASSED;
     }
+
+    *out_failed_rule = NULL;
 
     StatusCode status = resolved_rules_init(unresolved_rules, unresolved_rules_amount, out_resolved_rules);
 
@@ -121,12 +123,20 @@ StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_res
         goto cleanup;
     }
 
+    for (size_t i = 0; i < resolved_rules_amount; i++)
+    {
+        
+    }
+
     return IMPLEMENTATION_INCOMPLETE;
 
     cleanup:
         // Can only be invoked after resolved_rules_init is called and resolved_rules_amount is defined
+        resolved_rules_free(out_resolved_rules, resolved_rules_amount);
+        *out_resolved_rules = NULL;
+        return status;
 
-        
+
 }
 
 static void resolved_rules_free(ResolvedRule *resolved_rules, size_t resolved_rules_amount)
@@ -153,6 +163,36 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
     resolved_rule->deps_amount = 0;
 }
 
+/*static*/ StatusCode resolve_deps(ResolvedRule *target_resolved_rule, ResolvedRule *resolved_rules, const size_t resolved_rules_amount, ErrorObjectsReporter *error_objects_reporter)
+{
+    error_objects_reporter->has_error_rule = false;
+    error_objects_reporter->has_error_dep = false;
+
+    if (target_resolved_rule->deps_amount != target_resolved_rule->unresolved_rule->deps_amount)
+    {
+        return RESOLVER_MISSMATCH_IN_DEP_AMOUNT_BETWEEN_RESOLVED_RULE_AND_UNRESOLVED_RULE;
+    }
+
+    StatusCode status;
+
+    for (size_t i = 0; i < target_resolved_rule->unresolved_rule->deps_amount; i++)
+    {
+        status = resolve_dep(target_resolved_rule->unresolved_rule->deps[i], &(target_resolved_rule->deps[i]), resolved_rules, resolved_rules_amount);
+        
+        if (status != SUCCESS)
+        {
+            error_objects_reporter->has_error_rule = true;
+            error_objects_reporter->error_rule = target_resolved_rule->unresolved_rule;
+
+            error_objects_reporter->has_error_dep = true;
+            error_objects_reporter->error_dep_index = i;
+
+            return status;
+        }
+    }
+
+    return SUCCESS;
+}
 
 /*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
 {
