@@ -16,8 +16,9 @@
     Success does not imply the validity of the rule graph.
 */
 
-StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount);
-StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
+static StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount);
+static StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
+static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule);
 
 /*
     Heap allocates and initialises resolved rules.
@@ -83,6 +84,102 @@ StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
 
 
 /*
+    Calls resolved rules initialiser.
+    Resolves dependancies.
+    Upon failure resolved rules will be deallocated.
+    Upon success caller is responsible for deallocation
+*/
+StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount)
+{
+    if (!out_resolved_rules)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    *out_resolved_rules = NULL;
+
+    if (!out_resolved_rules_amount || !unresolved_rules)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    StatusCode status = resolved_rules_init(unresolved_rules, unresolved_rules_amount, out_resolved_rules);
+
+    if (status != SUCCESS)
+    {
+        // Failure implies no allocation has been made
+        return status;
+    }
+
+    // Upon succes the amount of resolved_rules returned by resolve_rules_init is equivilent to unresolved_rules_amount
+    const size_t resolved_rules_amount = unresolved_rules_amount;
+
+    status = resolved_rules_allocate_deps(*out_resolved_rules, resolved_rules_amount);
+
+    if (status != SUCCESS)
+    {
+        goto cleanup;
+    }
+
+    return IMPLEMENTATION_INCOMPLETE;
+
+    cleanup:
+        // Can only be invoked after resolved_rules_init is called and resolved_rules_amount is defined
+
+        
+}
+
+static void resolved_rules_free(ResolvedRule *resolved_rules, size_t resolved_rules_amount)
+{
+    if (resolved_rules_amount == 0)
+    {
+        return;
+    }
+
+    for (size_t i = 0; i < resolved_rules_amount; i++)
+    {
+        resolved_rule_free_internal_allocations(&(resolved_rules[i]));
+    }
+
+    free(resolved_rules);
+}
+
+static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
+{
+    free(resolved_rule->deps);
+    
+    resolved_rule->deps = NULL;
+
+    resolved_rule->deps_amount = 0;
+}
+
+
+/*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
+{
+    StatusCode status = resolve_dep_as_rule(dep, out_resolved_dep, resolved_rules, resolved_rules_amount);
+
+    if (status == SUCCESS)
+    {
+        return SUCCESS;
+    }
+
+    if (status != RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_RULE)
+    {
+        return status;
+    }
+
+    status = resolve_dep_as_path(dep, out_resolved_dep);
+
+    if (status == RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_PATH)
+    {
+        return RESOLVER_DEP_COULD_NOT_BE_RESOLVED;
+    }
+
+    return status;
+}
+
+
+/*
     Path must be a C-string
 
     Returns success if the path could successfully be resolved by stat().
@@ -109,66 +206,11 @@ StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
 
 
 /*
-    Calls resolved rules initialiser.
-    Resolves dependancies.
-    Upon failure resolved rules will be deallocated.
-    Upon success caller is responsible for deallocation
-*/
-StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount)
-{
-    if (!out_resolved_rules)
-    {
-        return NULL_POINTER_PASSED;
-    }
-
-    *out_resolved_rules = NULL;
-
-    if (!out_resolved_rules_amount || !unresolved_rules)
-    {
-        return NULL_POINTER_PASSED;
-    }
-
-    StatusCode status = resolved_rules_init(unresolved_rules, unresolved_rules_amount, out_resolved_rules);
-
-    if (status != SUCCESS)
-    {
-        return status;
-    }
-
-    return IMPLEMENTATION_INCOMPLETE;
-}
-
-
-/*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
-{
-    StatusCode status = resolve_dep_as_rule(dep, out_resolved_dep, resolved_rules, resolved_rules_amount);
-
-    if (status == SUCCESS)
-    {
-        return SUCCESS;
-    }
-
-    if (status != RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_RULE)
-    {
-        return status;
-    }
-
-    status = resolve_dep_as_path(dep, out_resolved_dep);
-
-    if (status == RESOLVER_DEP_COULD_NOT_BE_RESOLVED_AS_A_PATH)
-    {
-        return RESOLVER_DEP_COULD_NOT_BE_RESOLVED;
-    }
-
-    return status;
-}
-
-/*
     dep must be a valid C-String.
     Sets out_resolved_rule with the path in the dep if successful.
     Upon failure nothing is initialised.
 */
-StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep)
+static StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep)
 {
     StatusCode status = verify_path(dep);
 
@@ -187,7 +229,7 @@ StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep)
     dep has to be a C-string indicating the target name of the dependacny rule.
     a dependancy rule will successfully be returned if dep is a string equivilent to its target name.
 */
-StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
+static StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
 {
     for (size_t i = 0; i < resolved_rules_amount; i++)
     {
