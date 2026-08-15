@@ -57,6 +57,32 @@ StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
 }
 
 /*
+    Caller is responsible for deallocating deps even upon failure.
+*/
+/*static*/ StatusCode resolved_rules_allocate_deps(ResolvedRule *resolved_rules, size_t resolved_rules_amount)
+{
+    for (size_t i = 0; i < resolved_rules_amount; i++)
+    {
+        if (resolved_rules[i].unresolved_rule->deps_amount == 0)
+        {
+            continue;
+        }
+
+        resolved_rules[i].deps = malloc(resolved_rules[i].unresolved_rule->deps_amount * sizeof(ResolvedDep));
+
+        if (resolved_rules[i].deps == NULL)
+        {
+            return CFAB_HEAP_ALLOCATION_FAILED;
+        }
+
+        resolved_rules[i].deps_amount = resolved_rules[i].unresolved_rule->deps_amount;
+    }
+
+    return SUCCESS;
+}
+
+
+/*
     Path must be a C-string
 
     Returns success if the path could successfully be resolved by stat().
@@ -80,6 +106,38 @@ StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
 
     return CFAB_PATH_RESOLUTION_ERROR;
 }
+
+
+/*
+    Calls resolved rules initialiser.
+    Resolves dependancies.
+    Upon failure resolved rules will be deallocated.
+    Upon success caller is responsible for deallocation
+*/
+StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount)
+{
+    if (!out_resolved_rules)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    *out_resolved_rules = NULL;
+
+    if (!out_resolved_rules_amount || !unresolved_rules)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    StatusCode status = resolved_rules_init(unresolved_rules, unresolved_rules_amount, out_resolved_rules);
+
+    if (status != SUCCESS)
+    {
+        return status;
+    }
+
+    return IMPLEMENTATION_INCOMPLETE;
+}
+
 
 /*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, const ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
 {
@@ -140,7 +198,7 @@ StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, c
         }
 
         out_resolved_dep->type = RULE_DEP;
-        out_resolved_dep->dep.resolved_rule =&resolved_rules[i];
+        out_resolved_dep->dep.resolved_rule = &resolved_rules[i];
         
         return SUCCESS;
     }
