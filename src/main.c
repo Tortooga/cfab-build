@@ -3,6 +3,7 @@
 #include "preprocessor.h"
 #include "parser.h"
 #include "resolver.h"
+#include "rule_name_validator.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -73,6 +74,14 @@ int main(void)
         printf("\n");
     }
     */
+
+    char *collision_name;
+    if (!rule_names_are_unique(unresolved_rules, amount, &collision_name))
+    {
+        printf("Rule Name Collision: %s\n", collision_name);
+        goto cleanup;
+    }
+
 
     ResolvedRule *resolved_rules;
     size_t resolved_rules_amount;
