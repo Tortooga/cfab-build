@@ -61,7 +61,7 @@ int main(void)
 
     status = parse_unresolved_rules(&parser, &unresolved_rules, &amount);
 
-    printf("Parser Rules Status: %d\n", status);
+    printf("Parse Rules Status: %d\n", status);
 
     if (status != SUCCESS)
     {
@@ -75,32 +75,41 @@ int main(void)
     */
 
     ResolvedRule *resolved_rules;
-    status = resolved_rules_init(unresolved_rules, amount, &resolved_rules);
+    size_t resolved_rules_amount;
+    ErrorObjectsReporter err;
 
-    printf("Resolved Rules Init Status: %d\n", status);
+    status = resolved_rules_get(&resolved_rules, &resolved_rules_amount, unresolved_rules, amount, &err);
 
+    printf("Resolved Rules Get Status: %d\n", status);
+
+    printf("\n\n");
     if (status != SUCCESS)
     {
+        if (err.has_error_rule)
+        {
+            printf("Error Rule: %s\n", err.error_rule->target_name);
+        }
+        if (err.has_error_dep)
+        {
+            printf("Error Dep: %s\n", err.error_rule->deps[err.error_dep_index]);
+        }
+
         goto cleanup;
     }
 
-    ResolvedDep dep;
-    status = resolve_dep("one", &dep, resolved_rules, amount);
-
-    printf("Resolve Dependancy Status: %d\n", status);
-
-    if (status != SUCCESS)
+    for (size_t i = 0; i < resolved_rules_amount; i++)
     {
-        goto cleanup;
-    }
-
-    if (dep.type == PATH_DEP)
-    {
-        printf("Path Dependancy: %s\n", dep.dep.path);
-    }
-    else 
-    {
-        printf("Rule Dependancy: %s\n", dep.dep.resolved_rule->target_name);
+        printf("%s\n", resolved_rules[i].target_name);
+        for (size_t j = 0; j < resolved_rules[i].deps_amount; j++)
+        {
+            if (resolved_rules[i].deps[j].type == PATH_DEP)
+            {
+                printf("    Path Dep: %s\n", resolved_rules[i].deps[j].dep.path);
+                continue;
+            }
+            
+            printf("    Rule Dep: %s\n", resolved_rules[i].deps[j].dep.resolved_rule->target_name);
+        }
     }
 
     cleanup:

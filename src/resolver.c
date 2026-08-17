@@ -19,13 +19,22 @@
 static StatusCode resolve_dep_as_rule(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount);
 static StatusCode resolve_dep_as_path(const char *dep, ResolvedDep *out_resolved_dep);
 static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule);
+void resolved_rules_free(ResolvedRule *resolved_rules, size_t resolved_rules_amount);
+static StatusCode verify_path(const char *path);
+static StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount);
+static StatusCode resolve_deps(ResolvedRule *target_resolved_rule, ResolvedRule *resolved_rules, const size_t resolved_rules_amount, ErrorObjectsReporter *error_objects_reporter);
+static StatusCode resolved_rules_allocate_deps(ResolvedRule *resolved_rules, size_t resolved_rules_amount);
+static StatusCode resolved_rules_init(UnresolvedRule *unresolved_rules, size_t unresolved_rules_amount, ResolvedRule **out_resolved_rules);
+
+
+static StatusCode resolve_deps(ResolvedRule *target_resolved_rule, ResolvedRule *resolved_rules, const size_t resolved_rules_amount, ErrorObjectsReporter *error_objects_reporter);
 
 /*
     Heap allocates and initialises resolved rules.
     If the function succeeds the amount of resolved rules initialised is equal to the amount of unresolved rules.
     If it fails the function does not guarantee any initialisation. 
 */
-/*static*/ StatusCode resolved_rules_init(UnresolvedRule *unresolved_rules, size_t unresolved_rules_amount, ResolvedRule **out_resolved_rules)
+static StatusCode resolved_rules_init(UnresolvedRule *unresolved_rules, size_t unresolved_rules_amount, ResolvedRule **out_resolved_rules)
 {
      if (unresolved_rules_amount == 0)
      {
@@ -52,6 +61,7 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
         (*out_resolved_rules)[i].deps_amount = 0;
 
         (*out_resolved_rules)[i].unresolved_rule = &(unresolved_rules[i]);
+
      }
 
      return SUCCESS;
@@ -60,7 +70,7 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
 /*
     Caller is responsible for deallocating deps even upon failure.
 */
-/*static*/ StatusCode resolved_rules_allocate_deps(ResolvedRule *resolved_rules, size_t resolved_rules_amount)
+static StatusCode resolved_rules_allocate_deps(ResolvedRule *resolved_rules, size_t resolved_rules_amount)
 {
     for (size_t i = 0; i < resolved_rules_amount; i++)
     {
@@ -86,10 +96,10 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
 /*
     Calls resolved rules initialiser.
     Resolves dependancies.
-    Upon failure resolved rules will be deallocated. And if out_failed_rule is not NULL that means it is set to the unresolved_rule that caused the resolver to fail.
+    Upon failure resolved rules will be deallocated. Check the error object reporter.
     Upon success caller is responsible for deallocation.
 */
-StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount, UnresolvedRule **out_failed_rule)
+StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount, ErrorObjectsReporter *error_object_reporter)
 {
     if (!out_resolved_rules)
     {
@@ -98,12 +108,15 @@ StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_res
 
     *out_resolved_rules = NULL;
 
-    if (!out_resolved_rules_amount || !unresolved_rules)
+    if (!out_resolved_rules_amount || !unresolved_rules || !error_object_reporter)
     {
         return NULL_POINTER_PASSED;
     }
 
-    *out_failed_rule = NULL;
+    *out_resolved_rules_amount = 0;
+
+    error_object_reporter->has_error_rule = false;
+    error_object_reporter->has_error_dep = false;
 
     StatusCode status = resolved_rules_init(unresolved_rules, unresolved_rules_amount, out_resolved_rules);
 
@@ -125,23 +138,28 @@ StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_res
 
     for (size_t i = 0; i < resolved_rules_amount; i++)
     {
+        // Sets error_object_reporter
+        status = resolve_deps((*out_resolved_rules) + i, *out_resolved_rules, resolved_rules_amount, error_object_reporter);
         
+        if (status != SUCCESS)
+        {
+            goto cleanup;
+        }
     }
 
-    return IMPLEMENTATION_INCOMPLETE;
+    *out_resolved_rules_amount = resolved_rules_amount;
+    return SUCCESS;
 
     cleanup:
         // Can only be invoked after resolved_rules_init is called and resolved_rules_amount is defined
-        resolved_rules_free(out_resolved_rules, resolved_rules_amount);
+        resolved_rules_free(*out_resolved_rules, resolved_rules_amount);
         *out_resolved_rules = NULL;
         return status;
-
-
 }
 
-static void resolved_rules_free(ResolvedRule *resolved_rules, size_t resolved_rules_amount)
+void resolved_rules_free(ResolvedRule *resolved_rules, size_t resolved_rules_amount)
 {
-    if (resolved_rules_amount == 0)
+    if (resolved_rules_amount == 0 || resolved_rules == NULL)
     {
         return;
     }
@@ -163,7 +181,7 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
     resolved_rule->deps_amount = 0;
 }
 
-/*static*/ StatusCode resolve_deps(ResolvedRule *target_resolved_rule, ResolvedRule *resolved_rules, const size_t resolved_rules_amount, ErrorObjectsReporter *error_objects_reporter)
+static StatusCode resolve_deps(ResolvedRule *target_resolved_rule, ResolvedRule *resolved_rules, const size_t resolved_rules_amount, ErrorObjectsReporter *error_objects_reporter)
 {
     error_objects_reporter->has_error_rule = false;
     error_objects_reporter->has_error_dep = false;
@@ -194,7 +212,7 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
     return SUCCESS;
 }
 
-/*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
+static StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount)
 {
     StatusCode status = resolve_dep_as_rule(dep, out_resolved_dep, resolved_rules, resolved_rules_amount);
 
@@ -226,7 +244,7 @@ static void resolved_rule_free_internal_allocations(ResolvedRule *resolved_rule)
     Returns CFAB_ATTEMPTED_TO_ACCESS_NON_EXISTENT_PATH if the path does not resolve to an existing node.
     Returns CFAB_PATH_RESOLUTION_ERROR and sets errno if the path could not be resolved for a different reason.
 */
-/*static*/ StatusCode verify_path(const char *path)
+static StatusCode verify_path(const char *path)
 { 
     struct stat info;
     

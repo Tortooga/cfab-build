@@ -49,10 +49,10 @@ typedef struct
     UnresolvedRule *error_rule;
 
     bool has_error_dep;
-    size_t error_dep_index
+    size_t error_dep_index;
 } ErrorObjectsReporter;
 
-/*static*/ StatusCode verify_path(const char *path);
-/*static*/ StatusCode resolve_dep(const char *dep, ResolvedDep *out_resolved_dep, ResolvedRule *resolved_rules, const size_t resolved_rules_amount);
-/*static*/ StatusCode resolved_rules_init(UnresolvedRule *unresolved_rules, size_t unresolved_rules_amount, ResolvedRule **out_resolved_rules);
+StatusCode resolved_rules_get(ResolvedRule **out_resolved_rules, size_t *out_resolved_rules_amount, UnresolvedRule *unresolved_rules, const size_t unresolved_rules_amount, ErrorObjectsReporter *error_object_reporter);
+void resolved_rules_free(ResolvedRule *resolved_rules, size_t resolved_rules_amount);
+
 #endif
