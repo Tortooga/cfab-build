@@ -5,7 +5,10 @@
 
 #include <stdbool.h>
 
-/*static*/ bool rule_target_names_are_unique(UnresolvedRule *rules, size_t rules_amount, UnresolvedRule *collision_rule);
-/*static*/ bool rule_names_are_non_empty(UnresolvedRule *rule, bool *has_non_empty_target_name);
-
+/*
+    Returns SUCCESS if all the names are valid. invalid_rule will not be set.
+    Returns NULL_POINTER_PASSED if one of the pointer args is NULL.
+    Returns an error status code and sets invalid_rule if an invalid rule is encountered.
+*/
+StatusCode rules_names_are_valid(UnresolvedRule *rules, size_t rules_amount, UnresolvedRule **invalid_rule);
 #endif

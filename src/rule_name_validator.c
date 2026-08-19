@@ -11,7 +11,7 @@
     Returns true if the target names in each rule is unique. collision_rule will not be set.
     Returns false if a collision is found. collision_rule will be set.
 */
-/*static*/ bool rule_target_names_are_unique(UnresolvedRule *rules, size_t rules_amount, UnresolvedRule *collision_rule)
+static bool rule_target_names_are_unique(UnresolvedRule *rules, size_t rules_amount, UnresolvedRule **collision_rule)
 {
     for (size_t target_rule_index = 0; target_rule_index < rules_amount; target_rule_index++)
     {
@@ -20,7 +20,7 @@
             // rule.target_name guaranteed to be NULL terminated by parser.
             if (strcmp(rules[target_rule_index].target_name, rules[i].target_name) == 0)
             {
-                *collision_rule = rules[target_rule_index];
+                *collision_rule = rules + target_rule_index;
                 return false;
             }
         }
@@ -34,7 +34,7 @@
     Returns false if either the target name or one of the dep names is empty. 
     In that case check the out param has_non_empty_target_name to determine which domain contains empty name.
 */
-/*static*/ bool rule_names_are_non_empty(UnresolvedRule *rule, bool *has_non_empty_target_name)
+static bool rule_names_are_non_empty(UnresolvedRule *rule, bool *has_non_empty_target_name)
 {
     *has_non_empty_target_name = true;
 
@@ -58,9 +58,21 @@
     return true;
 }
 
-StatusCode rule_names_are_valid(UnresolvedRule *rules, size_t rules_amount, UnresolvedRule *invalid_rule)
+/*
+    Returns SUCCESS if all the names are valid. invalid_rule will not be set.
+    Returns NULL_POINTER_PASSED if one of the pointer args is NULL.
+    Returns an error status code and sets invalid_rule if an invalid rule is encountered.
+*/
+StatusCode rules_names_are_valid(UnresolvedRule *rules, size_t rules_amount, UnresolvedRule **invalid_rule)
 {
-    if (!rules || !invalid_rule)
+    if (!invalid_rule)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    *invalid_rule = NULL;
+
+    if (!rules)
     {
         return NULL_POINTER_PASSED;
     }
@@ -70,13 +82,12 @@ StatusCode rule_names_are_valid(UnresolvedRule *rules, size_t rules_amount, Unre
         return VALIDATOR_TARGET_NAME_COLLISION;
     }
 
-    size_t cur_name_length = 0;
     bool cur_rule_has_non_empty_target_name;
     for (size_t i = 0; i < rules_amount; i++)
     {
         if (!rule_names_are_non_empty(rules + i, &cur_rule_has_non_empty_target_name))
         {
-            *invalid_rule = rules[i];
+            *invalid_rule = rules + i;
 
             if (cur_rule_has_non_empty_target_name)
             {
@@ -87,5 +98,5 @@ StatusCode rule_names_are_valid(UnresolvedRule *rules, size_t rules_amount, Unre
         }
     }
 
-    return IMPLEMENTATION_INCOMPLETE;
+    return SUCCESS;
 }
