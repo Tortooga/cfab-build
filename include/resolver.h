@@ -16,6 +16,13 @@ typedef enum
     RULE_DEP
 } DepType;
 
+typedef enum 
+{
+    COMPLETE_RULE,
+    PENDING_RULE,
+    INCOMPLETE_RULE
+} RuleStatus;
+
 typedef struct ResolvedRule ResolvedRule;
 
 // path must be null terminated.
@@ -41,6 +48,9 @@ typedef struct ResolvedRule
     size_t cmds_amount;
 
     UnresolvedRule *unresolved_rule;
+
+    // Usefull to indicate the rules status during cycle detection and scheduling.
+    RuleStatus rule_status;
 } ResolvedRule;
 
 typedef struct 

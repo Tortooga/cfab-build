@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "resolver.h"
 #include "rule_name_validator.h"
+#include "cycle_detector.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -68,20 +69,18 @@ int main(void)
     {
         goto cleanup;
     }
-    /*for (size_t i = 0; i < amount; i++)
-    {
-        print_unresolved_rule(&unresolved_rules[i]);
-        printf("\n");
-    }
-    */
 
-    char *collision_name;
-    if (!rule_names_are_unique(unresolved_rules, amount, &collision_name))
+    UnresolvedRule *err_rule;
+
+    status = rules_names_are_valid(unresolved_rules, amount, &err_rule);
+
+    printf("Rule Name Validator Status: %d\n", status);
+
+    if (status != SUCCESS)
     {
-        printf("Rule Name Collision: %s\n", collision_name);
+        printf("Invalid Rule: %s\n", err_rule->target_name);
         goto cleanup;
     }
-
 
     ResolvedRule *resolved_rules;
     size_t resolved_rules_amount;
@@ -119,6 +118,15 @@ int main(void)
             
             printf("    Rule Dep: %s\n", resolved_rules[i].deps[j].dep.resolved_rule->target_name);
         }
+    }
+
+    status = verify_acyclic(resolved_rules, resolved_rules_amount);
+
+    printf("Cycle Detection Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        goto cleanup;
     }
 
     cleanup:
