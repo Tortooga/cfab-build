@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "preprocessor.h"
 #include "status.h"
@@ -236,12 +237,9 @@ static bool char_is_significant(const char target, bool *comment_mode_indicator,
         return true;
     }
     
-    for (size_t i = 0; i < INSIGNIFICANT_CHARS_COUNT; i++)
+    if (isspace((unsigned char)target))
     {
-        if (target == INSIGNIFICANT_CHARS[i])
-        {
-            return false;
-        }
+        return false;
     }
 
     if (*command_block_indicator)
