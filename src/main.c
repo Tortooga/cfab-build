@@ -13,6 +13,12 @@
 #include <stddef.h>
 #include <errno.h>
 
+
+/*
+    WARNING: THIS IS A TESTING PLAYGROUND. SOME BUGS ARE LEFT INTENTIONALLY.
+*/
+
+
 int main(void)
 {
     StatusCode status;
@@ -123,8 +129,9 @@ int main(void)
     }
 
     ResolvedRule **schedule;
+    size_t schedule_length;
 
-    status = get_rules_schedule(resolved_rules, resolved_rules, resolved_rules_amount, &schedule);
+    status = get_rules_schedule(resolved_rules, resolved_rules, resolved_rules_amount, &schedule, &schedule_length);
 
     printf("Scheduler Status: %d\n", status);
 
@@ -133,9 +140,18 @@ int main(void)
         goto cleanup;
     }
 
-    for (size_t i = 0; i < resolved_rules_amount; i++)
+    for (size_t i = 0; i < schedule_length; i++)
     {
         printf("%s\n", schedule[i]->target_name);
+    }
+
+    for (size_t i = 0; i < schedule_length; i++)
+    {
+        for (size_t c = 0; c < schedule[c]->cmds_amount; c++)
+        {
+            printf("%s\n", schedule[i]->cmds[c]);
+            system(schedule[i]->cmds[c]);
+        }
     }
 
     cleanup:

@@ -10,7 +10,7 @@ static StatusCode schedule_rules_recursive(ResolvedRule *cur_rule, ResolvedRule 
 void free_schedule(ResolvedRule ***schedule);
 
 
-StatusCode get_rules_schedule(ResolvedRule *target_rule, ResolvedRule *rules, size_t rules_amount, ResolvedRule ***out_schedule)
+StatusCode get_rules_schedule(ResolvedRule *target_rule, ResolvedRule *rules, size_t rules_amount, ResolvedRule ***out_schedule, size_t *out_schedule_length)
 {
     
     if (!out_schedule)
@@ -20,6 +20,13 @@ StatusCode get_rules_schedule(ResolvedRule *target_rule, ResolvedRule *rules, si
     
     *out_schedule = NULL;
     
+    if (!out_schedule_length)
+    {
+        return NULL_POINTER_PASSED;
+    }
+
+    *out_schedule_length = 0;
+
     if (!target_rule || !rules)
     {
         return NULL_POINTER_PASSED;
@@ -48,6 +55,8 @@ StatusCode get_rules_schedule(ResolvedRule *target_rule, ResolvedRule *rules, si
         goto failure;
     }
     
+    *out_schedule_length = cur_schedule_index;
+
     return SUCCESS;
 
     failure:

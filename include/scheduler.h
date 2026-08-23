@@ -10,7 +10,7 @@
 
 
 
-StatusCode get_rules_schedule(ResolvedRule *target_rule, ResolvedRule *rules, size_t rules_amount, ResolvedRule ***out_schedule);
+StatusCode get_rules_schedule(ResolvedRule *target_rule, ResolvedRule *rules, size_t rules_amount, ResolvedRule ***out_schedule, size_t *out_schedule_length);
 void free_schedule(ResolvedRule ***schedule);
 
 
