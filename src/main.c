@@ -5,6 +5,7 @@
 #include "resolver.h"
 #include "rule_name_validator.h"
 #include "cycle_detector.h"
+#include "scheduler.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -90,7 +91,6 @@ int main(void)
 
     printf("Resolved Rules Get Status: %d\n", status);
 
-    printf("\n\n");
     if (status != SUCCESS)
     {
         if (err.has_error_rule)
@@ -105,28 +105,37 @@ int main(void)
         goto cleanup;
     }
 
-    for (size_t i = 0; i < resolved_rules_amount; i++)
-    {
-        printf("%s\n", resolved_rules[i].target_name);
-        for (size_t j = 0; j < resolved_rules[i].deps_amount; j++)
-        {
-            if (resolved_rules[i].deps[j].type == PATH_DEP)
-            {
-                printf("    Path Dep: %s\n", resolved_rules[i].deps[j].dep.path);
-                continue;
-            }
-            
-            printf("    Rule Dep: %s\n", resolved_rules[i].deps[j].dep.resolved_rule->target_name);
-        }
-    }
-
     status = verify_acyclic(resolved_rules, resolved_rules_amount);
 
     printf("Cycle Detection Status: %d\n", status);
 
     if (status != SUCCESS)
     {
+        for (size_t i = 0; i < resolved_rules_amount; i++)
+        {
+            if (resolved_rules[i].rule_status == PENDING_RULE)
+            {
+                printf("%s\n", resolved_rules[i].target_name);
+            }
+        }
+
         goto cleanup;
+    }
+
+    ResolvedRule **schedule;
+
+    status = get_rules_schedule(resolved_rules, resolved_rules, resolved_rules_amount, &schedule);
+
+    printf("Scheduler Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        goto cleanup;
+    }
+
+    for (size_t i = 0; i < resolved_rules_amount; i++)
+    {
+        printf("%s\n", schedule[i]->target_name);
     }
 
     cleanup:
