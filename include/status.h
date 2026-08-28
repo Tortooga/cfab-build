@@ -59,6 +59,10 @@ typedef enum
         // Scheduler
             SCHEDULER_MAX_RECURSION_DEPTH_REACHED = 701,
             SCHEDULER_SCHEDULE_INDEX_OUT_OF_BOUNDS = 702,
+
+        // Executor
+            EXECUTOR_PROCESS_DUPLICATION_FAILED = 801,
+            EXECUTOR_PROCESS_EXEC_FAILED = 802,
 } StatusCode;
 
 #endif

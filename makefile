@@ -12,12 +12,12 @@ run: bin/cfab
 	@./bin/cfab
 
 # Executable Files
-bin/cfab: bin obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o obj/rule_name_validator.o obj/cycle_detector.o obj/scheduler.o
-	$(CC) obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o obj/rule_name_validator.o obj/cycle_detector.o obj/scheduler.o -o bin/cfab 
+bin/cfab: bin obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o obj/rule_name_validator.o obj/cycle_detector.o obj/scheduler.o obj/job_analyzer.o
+	$(CC) obj/main.o obj/cfab_file.o obj/preprocessor.o obj/parser.o obj/resolver.o obj/rule_name_validator.o obj/cycle_detector.o obj/scheduler.o obj/job_analyzer.o -o bin/cfab 
 
 # Pattern Rules 
 obj/%.o: src/%.c | obj 
-	$(CC) -c $(WFLAGS) $(IFLAGS) $< -o $@
+	$(CC) -c $(DFLAGS) $(WFLAGS) $(IFLAGS) $< -o $@
 
 # Required Dirs
 obj:
