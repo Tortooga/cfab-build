@@ -51,6 +51,9 @@ typedef struct ResolvedRule
 
     // Usefull to indicate the rules status during cycle detection and scheduling.
     RuleStatus rule_status;
+
+    // Usefull for encremental builds
+    bool is_stale;
 } ResolvedRule;
 
 typedef struct 

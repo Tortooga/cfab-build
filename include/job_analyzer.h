@@ -28,6 +28,11 @@ typedef enum
 
 /*static*/ StatusCode get_rule_staleness_compared_to_path_deps(ResolvedRule *rule, StalenessStatus *out_status);
 
+/*
+    Rules must be schuled in the correct order
+*/
+StatusCode mark_stale_rules(ResolvedRule **schedule, size_t rules_amount);
+
 StatusCode scheduled_jobs_init(ResolvedRule *scheduled_rules, size_t scheduled_rules_amount, Job **out_jobs, size_t *out_jobs_amount);
 void free_jobs(Job **jobs);
 

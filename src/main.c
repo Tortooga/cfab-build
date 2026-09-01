@@ -6,6 +6,7 @@
 #include "rule_name_validator.h"
 #include "cycle_detector.h"
 #include "scheduler.h"
+#include "job_analyzer.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -142,16 +143,37 @@ int main(void)
 
     for (size_t i = 0; i < schedule_length; i++)
     {
-        printf("%s\n", schedule[i]->target_name);
-    }
-
-    for (size_t i = 0; i < schedule_length; i++)
-    {
-        for (size_t c = 0; c < schedule[c]->cmds_amount; c++)
+        for (size_t c = 0; c < schedule[i]->cmds_amount; c++)
         {
             printf("%s\n", schedule[i]->cmds[c]);
             system(schedule[i]->cmds[c]);
         }
+    }
+
+    Job *jobs;
+    size_t jobs_amount;
+
+    status = scheduled_jobs_init(*schedule, schedule_length, &jobs, &jobs_amount);
+
+    printf("Job Initialiser Status: %d\n", status);
+
+    if (status != SUCCESS)
+    {
+        goto cleanup;
+    }
+
+    printf("Jobs Amount: %zu\n", jobs_amount);
+
+    status = mark_stale_rules(schedule, schedule_length);
+
+    if (status != SUCCESS)
+    {
+        goto cleanup;
+    }
+
+    for (size_t i = 0; i < schedule_length; i++)
+    {
+        printf("%s: %d\n", schedule[i]->target_name, schedule[i]->is_stale);
     }
 
     cleanup:

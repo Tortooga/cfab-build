@@ -56,7 +56,7 @@ void free_jobs(Job **jobs)
     *jobs = NULL;
 }
 
-/*static*/ StatusCode get_rule_staleness_compared_to_path_deps(ResolvedRule *rule, StalenessStatus *out_status)
+/*static*/ StatusCode get_rule_staleness_compared_to_deps(ResolvedRule *rule, StalenessStatus *out_status)
 {
     struct stat rule_info;
 
@@ -78,12 +78,14 @@ void free_jobs(Job **jobs)
     struct stat child_info;
     for (size_t i = 0; i < rule->deps_amount; i++)
     {
-        if (rule->deps[i].type == RULE_DEP)
+        if (rule->deps[i].type == PATH_DEP)
         {
-            continue;
+            stat_ret = stat(rule->deps[i].dep.path, &child_info);
         }
-
-        stat_ret = stat(rule->deps[i].dep.path, &child_info);
+        else
+        {
+            stat_ret = stat(rule->deps[i].dep.resolved_rule->target_name, &child_info);
+        }
 
         /*
             According to the resolver invariants, if a dependancy is labelled as a path dep instead of a rule dep,
@@ -92,6 +94,12 @@ void free_jobs(Job **jobs)
         */
         if (stat_ret != 0)
         {
+            if (rule->deps[i].type == RULE_DEP)
+            {
+                *out_status = STALE;
+                return SUCCESS;
+            }
+
             return JOB_ANALYZER_FAILED_TO_ACCESS_PATH_DEPENDANCY;
         }
 
@@ -107,50 +115,59 @@ void free_jobs(Job **jobs)
     return SUCCESS;
 }
 
-
-StatusCode mark_up_to_date_jobs(ResolvedRule *rules, size_t rules_amount)
+/*
+    Rules must be schuled in the correct order
+*/
+StatusCode mark_stale_rules(ResolvedRule **schedule, size_t schedule_length)
 {
-    if (!rules)
+    if (!schedule)
     {
         return NULL_POINTER_PASSED;
     }
 
-    if (rules_amount == 0)
+    if (schedule_length == 0)
     {
         return SUCCESS;
     }
 
-    for (size_t i = 0; i < rules_amount; i++)
-    {
-        rules[i].is_up_to_date = false;
-    }
+    StatusCode status;
+    StalenessStatus cur_rule_staleness_status;
 
-    return IMPLEMENTATION_INCOMPLETE;
-}
-
-static StatusCode mark_up_to_date_jobs_recursive(ResolvedRule *cur_rule, size_t depth)
-{
-    if (depth >= UP_TO_DATE_JOBS_DETECTOR_RECUSRION_DEPTH_LIMIT)
+    for (size_t i = 0; i < schedule_length; i++)
     {
-        return JOB_ANALYZER_MAX_RECURSION_LIMIT_REACHED;
-    }
+        status = get_rule_staleness_compared_to_deps(schedule[i], &cur_rule_staleness_status);
 
-    for (size_t i = 0; i < cur_rule->deps_amount; i++)
-    {
-        if (cur_rule->deps[i].type == PATH_DEP)
+        if (status != SUCCESS)
         {
-            // Should check time stamps
+            return status;
+        }
+
+        if (cur_rule_staleness_status == STALE)
+        {
+            schedule[i]->is_stale = true;
             continue;
         }
 
-        // If a rule is up-to-date all of its children are up-to-date
-        if (cur_rule->deps[i].dep.resolved_rule->is_up_to_date == true)
-        {
-            continue;
-        }
-
-        // Recursive Call
+        schedule[i]->is_stale = false;
     }
 
-    return IMPLEMENTATION_INCOMPLETE;
+    // Scheduled rules cannot precede their dependancies
+    for (size_t i = 0; i < schedule_length; i++)
+    {
+        for (size_t dep_index = 0; dep_index < schedule[i]->deps_amount; dep_index++)
+        {
+            if (schedule[i]->deps[dep_index].type == PATH_DEP)
+            {
+                continue;
+            }
+
+            if (schedule[i]->deps[dep_index].dep.resolved_rule->is_stale)
+            {
+                schedule[i]->is_stale = true;
+                break;
+            }
+        }
+    }
+
+    return SUCCESS;
 }
