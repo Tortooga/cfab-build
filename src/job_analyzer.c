@@ -54,9 +54,19 @@
         
         if (*out_jobs == NULL)
         {
+            *out_jobs_amount = 0;
             return CFAB_HEAP_ALLOCATION_FAILED;
         }
 
+        // NULLing pids so free on failure doesnt crash
+        for (size_t i = 0; i < *out_jobs_amount; i++)
+        {
+            (*out_jobs)[i].pids = NULL;
+            (*out_jobs)[i].rule = NULL;
+            (*out_jobs)[i].pids_amount = 0;
+        }
+
+        StatusCode status = SUCCESS;
         size_t cur_job_index = 0;
         for (size_t i = 0; i < scheduled_rules_amount; i++)
         {
@@ -69,18 +79,44 @@
             if (scheduled_rules[i]->is_stale)
             {
                 (*out_jobs)[cur_job_index].rule = scheduled_rules[i];
+
+                if ((*out_jobs)[cur_job_index].rule->cmds_amount == 0)
+                {
+                    (*out_jobs)[cur_job_index].pids_amount = 0;
+                    continue;
+                }
+
+                (*out_jobs)[cur_job_index].pids = malloc(sizeof(pid_t) * scheduled_rules[i]->cmds_amount);
+
+                if (!(*out_jobs)[cur_job_index].pids)
+                {
+                    status = CFAB_HEAP_ALLOCATION_FAILED;
+                    goto failure;
+                }
+
+                (*out_jobs)[cur_job_index].pids_amount = scheduled_rules[i]->cmds_amount;
+
                 cur_job_index++;
             }
         }
 
         return SUCCESS;
+
+        failure:
+            free_jobs(out_jobs, *out_jobs_amount);
+            return status;
     }
 
-    void free_jobs(Job **jobs)
+    void free_jobs(Job **jobs, size_t jobs_amount)
     {
         if (!jobs)
         {
             return;
+        }
+
+        for (size_t i = 0; i < jobs_amount; i++)
+        {
+            free((*jobs)[i].pids);
         }
 
         free(*jobs);
