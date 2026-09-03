@@ -8,53 +8,84 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-StatusCode scheduled_jobs_init(ResolvedRule *scheduled_rules, size_t scheduled_rules_amount, Job **out_jobs, size_t *out_jobs_amount)
-{
-    if (!out_jobs_amount)
+/*
+    Rules must be scheduled and their staleness status must be marked.
+*/
+    StatusCode scheduled_jobs_init(ResolvedRule **scheduled_rules, size_t scheduled_rules_amount, Job **out_jobs, size_t *out_jobs_amount)
     {
-        return NULL_POINTER_PASSED;
-    }
+        if (!out_jobs_amount)
+        {
+            return NULL_POINTER_PASSED;
+        }
 
-    *out_jobs_amount = 0;
+        *out_jobs_amount = 0;
 
-    if (!scheduled_rules || !out_jobs)
-    {
-        return NULL_POINTER_PASSED;
-    }
+        if (!out_jobs)
+        {
+            return NULL_POINTER_PASSED;
+        }
 
-    if (scheduled_rules_amount == 0)
-    {
+        *out_jobs = NULL;
+
+        if (!scheduled_rules)
+        {
+            return NULL_POINTER_PASSED;
+        }
+
+        if (scheduled_rules_amount == 0)
+        {
+            return SUCCESS;
+        }
+
+        for (size_t i = 0; i < scheduled_rules_amount; i++)
+        {
+            if (scheduled_rules[i]->is_stale)
+            {
+                (*out_jobs_amount)++;
+            }
+        }
+
+        if (*out_jobs_amount == 0)
+        {
+            return SUCCESS;
+        }
+
+        *out_jobs = malloc(sizeof(Job) * (*out_jobs_amount));
+        
+        if (*out_jobs == NULL)
+        {
+            return CFAB_HEAP_ALLOCATION_FAILED;
+        }
+
+        size_t cur_job_index = 0;
+        for (size_t i = 0; i < scheduled_rules_amount; i++)
+        {
+            if (cur_job_index >= *out_jobs_amount)
+            {
+                // This guarantees we have stored all the stale rules
+                break;
+            }
+
+            if (scheduled_rules[i]->is_stale)
+            {
+                (*out_jobs)[cur_job_index].rule = scheduled_rules[i];
+                cur_job_index++;
+            }
+        }
+
         return SUCCESS;
     }
 
-    *out_jobs = malloc(sizeof(Job) * scheduled_rules_amount);
-    
-    if (*out_jobs == NULL)
+    void free_jobs(Job **jobs)
     {
-        return CFAB_HEAP_ALLOCATION_FAILED;
+        if (!jobs)
+        {
+            return;
+        }
+
+        free(*jobs);
+        *jobs = NULL;
     }
-
-    *out_jobs_amount = scheduled_rules_amount; 
-
-    for (size_t i = 0; i < *out_jobs_amount; i++)
-    {
-        (*out_jobs)[i].cmds = scheduled_rules[i].cmds;
-        (*out_jobs)[i].cmds_amount = scheduled_rules[i].cmds_amount;
-    }
-
-    return SUCCESS;
-}
-
-void free_jobs(Job **jobs)
-{
-    if (!jobs)
-    {
-        return;
-    }
-
-    free(*jobs);
-    *jobs = NULL;
-}
 
 /*static*/ StatusCode get_rule_staleness_compared_to_deps(ResolvedRule *rule, StalenessStatus *out_status)
 {

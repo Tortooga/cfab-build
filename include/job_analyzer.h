@@ -12,12 +12,8 @@
 
 typedef struct 
 {
-    char **cmds;
-    size_t cmds_amount;
-    
+    ResolvedRule *rule;
     pid_t pid;
-
-    bool up_to_date;
 } Job;
 
 typedef enum
@@ -33,7 +29,7 @@ typedef enum
 */
 StatusCode mark_stale_rules(ResolvedRule **schedule, size_t rules_amount);
 
-StatusCode scheduled_jobs_init(ResolvedRule *scheduled_rules, size_t scheduled_rules_amount, Job **out_jobs, size_t *out_jobs_amount);
+StatusCode scheduled_jobs_init(ResolvedRule **scheduled_rules, size_t scheduled_rules_amount, Job **out_jobs, size_t *out_jobs_amount);
 void free_jobs(Job **jobs);
 
 
