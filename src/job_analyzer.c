@@ -83,6 +83,8 @@
                 if ((*out_jobs)[cur_job_index].rule->cmds_amount == 0)
                 {
                     (*out_jobs)[cur_job_index].pids_amount = 0;
+                    cur_job_index++;
+
                     continue;
                 }
 
