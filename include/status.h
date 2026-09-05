@@ -68,6 +68,8 @@ typedef enum
         // Executor
             EXECUTOR_PROCESS_DUPLICATION_FAILED = 901,
             EXECUTOR_PROCESS_EXEC_FAILED = 902,
+            EXECUTOR_WAIT_FAILED = 903,
+            EXECUTOR_CHILD_PROCCESS_FAILED = 904,
 } StatusCode;
 
 #endif
